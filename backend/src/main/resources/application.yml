@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: backend
+  datasource:
+    url: jdbc:mysql://localhost:3306/ecommerce?serverTimezone=UTC&characterEncoding=UTF-8
+    username: ecommerce
+    password: ecommerce
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+  jackson:
+    serialization:
+      indent-output: true
+
+server:
+  port: 8080
