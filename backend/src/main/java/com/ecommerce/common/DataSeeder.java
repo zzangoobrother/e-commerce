@@ -7,6 +7,7 @@ import com.ecommerce.supplier.SupplierRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
@@ -24,7 +25,10 @@ public class DataSeeder implements CommandLineRunner {
         this.productRepository = productRepository;
     }
 
+    // 공급사·상품 시드를 한 트랜잭션으로 묶어 원자적으로 커밋/롤백한다
+    // (count() 기반 멱등성은 단일 인스턴스·순차 기동 가정 — 운영 전에는 DB 유니크 제약으로 보완 필요)
     @Override
+    @Transactional
     public void run(String... args) {
         if (supplierRepository.count() > 0) {
             return; // 이미 시드됨
