@@ -1,6 +1,9 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
-import { getAdminProducts, getSuppliers } from "@/lib/api";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import type { CSSProperties } from "react";
+import { getAdminProducts, getSuppliers, ApiError } from "@/lib/api";
+import LogoutButton from "../LogoutButton";
 
 // 어드민 공급사별 상품 목록 페이지 (supplierId 쿼리 파라미터로 필터)
 export default async function AdminProductsPage({
@@ -8,22 +11,42 @@ export default async function AdminProductsPage({
 }: {
   searchParams: Promise<{ supplierId?: string }>;
 }) {
+  // 쿠키에서 토큰 읽기 (없으면 로그인으로 — proxy의 2차 방어)
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_token")?.value;
+  if (!token) {
+    redirect("/admin/login");
+  }
+
   const { supplierId } = await searchParams;
   const selectedId = supplierId ? Number(supplierId) : undefined;
 
   let suppliers, products;
   try {
     [suppliers, products] = await Promise.all([
-      getSuppliers(),
-      getAdminProducts(selectedId),
+      getSuppliers(token),
+      getAdminProducts(token, selectedId),
     ]);
-  } catch {
+  } catch (err) {
+    // 401 = 토큰 만료/무효 → 로그인 페이지로
+    if (err instanceof ApiError && err.status === 401) {
+      redirect("/admin/login");
+    }
     return <main style={{ padding: 24 }}><p>백엔드 연결 실패</p></main>;
   }
 
   return (
     <main style={{ padding: 24 }}>
-      <Link href="/admin">← 어드민</Link>
+      <header
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <Link href="/admin">← 어드민</Link>
+        <LogoutButton />
+      </header>
       <h1>상품 관리 (공급사별)</h1>
 
       {/* 공급사 필터 네비게이션 */}
