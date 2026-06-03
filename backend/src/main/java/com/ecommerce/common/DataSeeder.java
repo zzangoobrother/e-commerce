@@ -1,11 +1,15 @@
 package com.ecommerce.common;
 
+import com.ecommerce.auth.Admin;
+import com.ecommerce.auth.AdminRepository;
 import com.ecommerce.product.Product;
 import com.ecommerce.product.ProductRepository;
 import com.ecommerce.supplier.Supplier;
 import com.ecommerce.supplier.SupplierRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,19 +25,45 @@ public class DataSeeder implements CommandLineRunner {
 
     private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
+    private final AdminRepository adminRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final String adminUsername;
+    private final String adminPassword;
 
     public DataSeeder(SupplierRepository supplierRepository,
-                      ProductRepository productRepository) {
+                      ProductRepository productRepository,
+                      AdminRepository adminRepository,
+                      PasswordEncoder passwordEncoder,
+                      @Value("${admin.seed.username}") String adminUsername,
+                      @Value("${admin.seed.password}") String adminPassword) {
         this.supplierRepository = supplierRepository;
         this.productRepository = productRepository;
+        this.adminRepository = adminRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.adminUsername = adminUsername;
+        this.adminPassword = adminPassword;
     }
 
-    // 공급사·상품 시드를 한 트랜잭션으로 묶어 원자적으로 커밋/롤백한다
-    // (이름 존재 여부로 멱등성 판단 — 동시 기동 race는 name 유니크 제약이 최종 방어)
+    // 어드민 계정·카탈로그 시드를 한 트랜잭션으로 묶어 원자적으로 커밋/롤백한다
+    // (이름 존재 여부로 멱등성 판단 — 동시 기동 race는 유니크 제약이 최종 방어)
     // 주의: race에서 진 인스턴스는 제약 위반으로 기동이 실패할 수 있음 (다중 인스턴스 배포 시 재고려)
     @Override
     @Transactional
     public void run(String... args) {
+        seedAdmin();
+        seedCatalog();
+    }
+
+    // 어드민 계정 시드 — 비밀번호는 BCrypt 해싱 저장
+    private void seedAdmin() {
+        if (adminRepository.existsByUsername(adminUsername)) {
+            return; // 이미 시드됨
+        }
+        adminRepository.save(new Admin(adminUsername, passwordEncoder.encode(adminPassword)));
+    }
+
+    // 공급사/상품 시드
+    private void seedCatalog() {
         if (supplierRepository.existsByName(FIRST_SUPPLIER_NAME)) {
             return; // 이미 시드됨
         }
