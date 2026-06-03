@@ -4,6 +4,9 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -14,6 +17,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -40,8 +44,31 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+                .authorizeHttpRequests(auth -> auth
+                        // 로그인은 인증 없이 허용
+                        .requestMatchers(HttpMethod.POST, "/api/admin/login").permitAll()
+                        // 나머지 어드민 API는 JWT 필수
+                        .requestMatchers("/api/admin/**").authenticated()
+                        // 스토어 API 등 그 외는 모두 개방
+                        .anyRequest().permitAll())
+                // Bearer 토큰(JWT) 검증
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(Customizer.withDefaults())
+                        .authenticationEntryPoint(jsonAuthenticationEntryPoint()))
+                // 미인증 접근(토큰 없음)에도 동일한 401 JSON 응답
+                .exceptionHandling(ex ->
+                        ex.authenticationEntryPoint(jsonAuthenticationEntryPoint()));
         return http.build();
+    }
+
+    // 미인증/무효 토큰 요청에 기존 에러 형식({"message": ...})으로 401 응답
+    private AuthenticationEntryPoint jsonAuthenticationEntryPoint() {
+        return (request, response, authException) -> {
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write("{\"message\": \"인증이 필요합니다.\"}");
+        };
     }
 
     // 프론트(localhost:3000) → 백엔드 CORS 허용
