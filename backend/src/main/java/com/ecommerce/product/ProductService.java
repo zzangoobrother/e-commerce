@@ -44,9 +44,7 @@ public class ProductService {
     public Product create(ProductRequest request) {
         Supplier supplier = loadSupplier(request.supplierId());
         Product product = new Product(supplier, request.name(), request.description(),
-                request.price(), request.stockQuantity());
-        product.update(request.name(), request.description(), request.price(),
-                request.stockQuantity(), request.status());
+                request.price(), request.stockQuantity(), request.status());
         return productRepository.save(product);
     }
 

@@ -11,7 +11,8 @@ public class Supplier {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    // 공급사명 — 중복 불가 (시드 멱등성의 DB 레벨 방어선)
+    @Column(nullable = false, unique = true)
     private String name;
 
     private String contactEmail;
@@ -28,9 +29,14 @@ public class Supplier {
     }
 
     public Supplier(String name, String contactEmail) {
+        this(name, contactEmail, SupplierStatus.ACTIVE);
+    }
+
+    // 상태를 명시해 생성 (어드민 생성 요청 등)
+    public Supplier(String name, String contactEmail, SupplierStatus status) {
         this.name = name;
         this.contactEmail = contactEmail;
-        this.status = SupplierStatus.ACTIVE;
+        this.status = status;
     }
 
     @PrePersist
