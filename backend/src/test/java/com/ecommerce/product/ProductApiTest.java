@@ -67,4 +67,23 @@ class ProductApiTest {
         mockMvc.perform(get("/api/products"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void 숨김_상태로_상품을_생성하면_요청한_상태가_반영된다() throws Exception {
+        Supplier supplier = supplierRepository.save(
+                new Supplier("공급사C", "c@example.com"));
+
+        String body = objectMapper.writeValueAsString(Map.of(
+                "supplierId", supplier.getId(),
+                "name", "비공개 상품",
+                "description", "아직 공개 전",
+                "price", 1000,
+                "stockQuantity", 5,
+                "status", "HIDDEN"));
+
+        mockMvc.perform(post("/api/admin/products")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("HIDDEN"));
+    }
 }

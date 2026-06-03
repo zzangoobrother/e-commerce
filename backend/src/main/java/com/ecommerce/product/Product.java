@@ -43,12 +43,18 @@ public class Product {
 
     public Product(Supplier supplier, String name, String description,
                    BigDecimal price, int stockQuantity) {
+        this(supplier, name, description, price, stockQuantity, ProductStatus.ON_SALE);
+    }
+
+    // 상태를 명시해 생성 (어드민 생성 요청 등)
+    public Product(Supplier supplier, String name, String description,
+                   BigDecimal price, int stockQuantity, ProductStatus status) {
         this.supplier = supplier;
         this.name = name;
         this.description = description;
         this.price = price;
         this.stockQuantity = stockQuantity;
-        this.status = ProductStatus.ON_SALE;
+        this.status = status;
     }
 
     @PrePersist

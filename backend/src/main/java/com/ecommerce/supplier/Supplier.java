@@ -28,9 +28,14 @@ public class Supplier {
     }
 
     public Supplier(String name, String contactEmail) {
+        this(name, contactEmail, SupplierStatus.ACTIVE);
+    }
+
+    // 상태를 명시해 생성 (어드민 생성 요청 등)
+    public Supplier(String name, String contactEmail, SupplierStatus status) {
         this.name = name;
         this.contactEmail = contactEmail;
-        this.status = SupplierStatus.ACTIVE;
+        this.status = status;
     }
 
     @PrePersist

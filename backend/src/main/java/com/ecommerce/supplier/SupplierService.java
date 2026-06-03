@@ -28,8 +28,8 @@ public class SupplierService {
 
     @Transactional
     public Supplier create(SupplierRequest request) {
-        Supplier supplier = new Supplier(request.name(), request.contactEmail());
-        supplier.update(request.name(), request.contactEmail(), request.status());
+        Supplier supplier = new Supplier(
+                request.name(), request.contactEmail(), request.status());
         return supplierRepository.save(supplier);
     }
 
