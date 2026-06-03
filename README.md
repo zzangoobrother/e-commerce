@@ -13,7 +13,9 @@
 3. 프론트: `cd frontend && npm install && npm run dev` (http://localhost:3000)
 4. 접속: 스토어 http://localhost:3000 · 어드민 http://localhost:3000/admin
 
-> 이번 골격에는 인증이 없다(개방 API).
+> **어드민 인증:** 어드민 화면/API는 JWT 로그인이 필요하다. 기본 계정은 `admin` / `admin1234`
+> (환경변수 `ADMIN_USERNAME` / `ADMIN_PASSWORD`로 변경 가능). 로그인: http://localhost:3000/admin/login
+> 스토어 화면/API는 인증 없이 접근 가능하다.
 
 > **기존 로컬 DB 볼륨이 있는 경우:** 공급사명 유니크 제약이 추가되어 기존 볼륨에는 자동
 > 적용되지 않을 수 있다. `docker compose down -v && docker compose up -d`로 볼륨을
@@ -57,6 +59,7 @@ createdAt (LocalDateTime)     price (BigDecimal)
 |------|--------------|------|
 | 스토어 | `GET /api/products` | 노출 가능한(ON_SALE) 상품 목록 |
 | 스토어 | `GET /api/products/{id}` | 상품 상세 |
+| 어드민 | `POST /api/admin/login` | 어드민 로그인 (JWT 발급) — 인증 불필요 |
 | 어드민 | `GET /api/admin/suppliers` | 공급사 목록 |
 | 어드민 | `POST /api/admin/suppliers` | 공급사 생성 |
 | 어드민 | `PUT /api/admin/suppliers/{id}` | 공급사 수정 |
@@ -65,3 +68,14 @@ createdAt (LocalDateTime)     price (BigDecimal)
 | 어드민 | `POST /api/admin/products` | 상품 생성(공급사 지정) |
 | 어드민 | `PUT /api/admin/products/{id}` | 상품 수정 |
 | 어드민 | `DELETE /api/admin/products/{id}` | 상품 삭제 |
+
+> 어드민 API(`/api/admin/**`)는 로그인 API를 제외하고 모두 `Authorization: Bearer <token>` 헤더가 필요하다.
+
+## 보안 한계 (골격 수준 — 운영 전 보완 필요)
+
+- 토큰을 일반 쿠키에 저장한다 (httpOnly 아님 → XSS에 취약). 운영 전 httpOnly 쿠키 전환 권장
+- 리프레시 토큰이 없다 (만료 시 재로그인 필요, 기본 1시간)
+- 서버 측 토큰 무효화가 없다 (로그아웃은 클라이언트 쿠키 삭제만)
+- 로그인 시도 제한(brute-force 방어)이 없다
+- 응답 시간 차이로 계정 존재 여부를 추측할 수 있다 (타이밍 기반 user enumeration — 아이디 부재 시 BCrypt 미수행)
+- 토큰 만료로 401을 받으면 로그인 페이지로 이동하지만, 만료된 쿠키는 재로그인 전까지 브라우저에 남는다

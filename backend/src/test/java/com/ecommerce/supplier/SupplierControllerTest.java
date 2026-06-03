@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -36,14 +37,14 @@ class SupplierControllerTest {
                 Map.of("name", "신선식품", "contactEmail", "fresh@example.com",
                        "status", "ACTIVE"));
 
-        mockMvc.perform(post("/api/admin/suppliers")
+        mockMvc.perform(post("/api/admin/suppliers").with(jwt())
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.name").value("신선식품"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
-        mockMvc.perform(get("/api/admin/suppliers"))
+        mockMvc.perform(get("/api/admin/suppliers").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("신선식품"));
     }
@@ -54,7 +55,7 @@ class SupplierControllerTest {
                 Map.of("name", "휴면공급사", "contactEmail", "rest@example.com",
                        "status", "INACTIVE"));
 
-        mockMvc.perform(post("/api/admin/suppliers")
+        mockMvc.perform(post("/api/admin/suppliers").with(jwt())
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("INACTIVE"));

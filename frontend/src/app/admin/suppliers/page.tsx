@@ -1,19 +1,42 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
-import { getSuppliers } from "@/lib/api";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import type { CSSProperties } from "react";
+import { getSuppliers, ApiError } from "@/lib/api";
+import LogoutButton from "../LogoutButton";
 
 // 어드민 공급사 목록 페이지
 export default async function AdminSuppliersPage() {
+  // 쿠키에서 토큰 읽기 (없으면 로그인으로 — proxy의 2차 방어)
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_token")?.value;
+  if (!token) {
+    redirect("/admin/login");
+  }
+
   let suppliers;
   try {
-    suppliers = await getSuppliers();
-  } catch {
+    suppliers = await getSuppliers(token);
+  } catch (err) {
+    // 401 = 토큰 만료/무효 → 로그인 페이지로
+    if (err instanceof ApiError && err.status === 401) {
+      redirect("/admin/login");
+    }
     return <main style={{ padding: 24 }}><p>백엔드 연결 실패</p></main>;
   }
 
   return (
     <main style={{ padding: 24 }}>
-      <Link href="/admin">← 어드민</Link>
+      <header
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <Link href="/admin">← 어드민</Link>
+        <LogoutButton />
+      </header>
       <h1>공급사 관리</h1>
       <table style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead>
