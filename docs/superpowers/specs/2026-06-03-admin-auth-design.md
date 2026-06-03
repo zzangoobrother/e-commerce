@@ -23,12 +23,11 @@
 ## 2. 기술 스택 / 의존성
 
 - 기존: Java 25, Spring Boot 4.x, Spring Data JPA, H2(테스트), Next.js 16
-- **추가 의존성 (backend/build.gradle.kts):**
+- **추가 의존성 (backend/build.gradle.kts — Spring Initializr 4.0.6 기준 확인 완료):**
   - `org.springframework.boot:spring-boot-starter-security`
-  - `org.springframework.boot:spring-boot-starter-oauth2-resource-server` (Nimbus JWT 인코더/디코더 포함)
-  - 테스트: `org.springframework.boot:spring-boot-starter-security-test` (또는 Spring Boot 4.x의 해당 테스트 스타터)
-- **주의:** Spring Boot 4.x는 스타터 명명이 변경됨(예: `starter-webmvc`). 플랜 작성 시
-  실제 Initializr/문서에서 정확한 아티팩트명을 확인할 것.
+  - `org.springframework.boot:spring-boot-starter-security-oauth2-resource-server` (Nimbus JWT 인코더/디코더 포함)
+  - 테스트: `org.springframework.boot:spring-boot-starter-security-test`,
+    `org.springframework.boot:spring-boot-starter-security-oauth2-resource-server-test`
 - 프론트 추가 의존성: 없음 (Next.js 내장 `cookies()`, `middleware` 사용)
 
 ## 3. 아키텍처 개요
@@ -115,7 +114,7 @@
 | 파일 | 책임 |
 |------|------|
 | `app/admin/login/page.tsx` (신규) | 로그인 폼 — 클라이언트 컴포넌트. 성공 시 쿠키 저장 + `/admin` 이동, 실패 시 에러 메시지 |
-| `middleware.ts` (신규, 루트) | `/admin/*` 접근 시 `admin_token` 쿠키 없으면 `/admin/login` 리다이렉트 (`/admin/login` 자신은 제외) |
+| `src/proxy.ts` (신규) | `/admin/*` 접근 시 `admin_token` 쿠키 없으면 `/admin/login` 리다이렉트 (`/admin/login` 자신은 제외). **Next.js 16에서 middleware가 proxy로 개명됨** — 파일명 `proxy.ts`, 내보내는 함수명 `proxy` |
 | `lib/api.ts` (확장) | `login(username, password)` 추가. 어드민 API 함수들에 `token` 파라미터 추가 → `Authorization: Bearer` 헤더 부착 |
 | `app/admin/page.tsx` 등 어드민 3개 페이지 (수정) | `cookies()`로 토큰 읽어 API 호출에 전달. 401 시 `/admin/login` 리다이렉트. 로그아웃 버튼 |
 
@@ -126,7 +125,7 @@
 - 로그아웃 = 쿠키 삭제(max-age=0) + `/admin/login` 이동
 - 골격 한계(문서화): httpOnly가 아니므로 XSS에 취약 — 운영 전 httpOnly 쿠키 + 서버 액션 전환 권장
 
-### 6.3 middleware 동작
+### 6.3 proxy(구 middleware) 동작
 
 - 매칭: `/admin/:path*` (단, `/admin/login` 제외)
 - 검사: `admin_token` 쿠키 **존재 여부만** (서명/만료 검증은 백엔드 책임)
