@@ -16,6 +16,9 @@ import java.math.BigDecimal;
 @Profile("!test")
 public class DataSeeder implements CommandLineRunner {
 
+    // 시드의 기준이 되는 첫 번째 공급사명 (존재하면 이미 시드된 것으로 간주)
+    private static final String FIRST_SUPPLIER_NAME = "신선식품 주식회사";
+
     private final SupplierRepository supplierRepository;
     private final ProductRepository productRepository;
 
@@ -26,16 +29,17 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     // 공급사·상품 시드를 한 트랜잭션으로 묶어 원자적으로 커밋/롤백한다
-    // (count() 기반 멱등성은 단일 인스턴스·순차 기동 가정 — 운영 전에는 DB 유니크 제약으로 보완 필요)
+    // (이름 존재 여부로 멱등성 판단 — 동시 기동 race는 name 유니크 제약이 최종 방어)
+    // 주의: race에서 진 인스턴스는 제약 위반으로 기동이 실패할 수 있음 (다중 인스턴스 배포 시 재고려)
     @Override
     @Transactional
     public void run(String... args) {
-        if (supplierRepository.count() > 0) {
+        if (supplierRepository.existsByName(FIRST_SUPPLIER_NAME)) {
             return; // 이미 시드됨
         }
 
         Supplier fresh = supplierRepository.save(
-                new Supplier("신선식품 주식회사", "fresh@example.com"));
+                new Supplier(FIRST_SUPPLIER_NAME, "fresh@example.com"));
         Supplier snack = supplierRepository.save(
                 new Supplier("바삭과자 주식회사", "snack@example.com"));
 

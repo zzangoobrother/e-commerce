@@ -11,7 +11,8 @@ public class Supplier {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    // 공급사명 — 중복 불가 (시드 멱등성의 DB 레벨 방어선)
+    @Column(nullable = false, unique = true)
     private String name;
 
     private String contactEmail;
