@@ -1,20 +1,36 @@
 package com.ecommerce.common;
 
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-// 보안 설정 — 1단계: 전체 개방 상태 (어드민 API 보호는 이후 태스크에서 활성화)
+// 보안 설정 — JWT 발급/검증 빈 + 보안 필터 체인
 @Configuration
 public class SecurityConfig {
+
+    // HS256 서명용 시크릿 (최소 32바이트)
+    @Value("${jwt.secret}")
+    private String jwtSecret;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -28,7 +44,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 프론트(localhost:3000) → 백엔드 CORS 허용 (기존 WebConfig에서 이전)
+    // 프론트(localhost:3000) → 백엔드 CORS 허용
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
@@ -38,5 +54,30 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
         return source;
+    }
+
+    // 비밀번호 해싱 (BCrypt)
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    // JWT 발급 (HS256 대칭키)
+    @Bean
+    public JwtEncoder jwtEncoder() {
+        SecretKey key = secretKey();
+        return new NimbusJwtEncoder(new ImmutableSecret<>(key));
+    }
+
+    // JWT 검증 (HS256 대칭키)
+    @Bean
+    public JwtDecoder jwtDecoder() {
+        return NimbusJwtDecoder.withSecretKey(secretKey())
+                .macAlgorithm(MacAlgorithm.HS256)
+                .build();
+    }
+
+    private SecretKey secretKey() {
+        return new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
     }
 }
