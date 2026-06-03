@@ -14,3 +14,47 @@
 4. 접속: 스토어 http://localhost:3000 · 어드민 http://localhost:3000/admin
 
 > 이번 골격에는 인증이 없다(개방 API).
+
+## 시드 데이터
+
+최초 기동 시 샘플 데이터가 자동으로 삽입된다(멱등 — 이미 존재하면 건너뜀).
+
+| 구분 | 이름 |
+|------|------|
+| 공급사 | 신선식품 주식회사, 바삭과자 주식회사 |
+| 상품 | 유기농 사과 1kg, 제철 딸기 500g, 감자칩 오리지널, 초코쿠키 12개입 |
+
+## 도메인 모델
+
+```
+Supplier (공급사)              Product (상품)
+─────────────────             ─────────────────
+id (PK, Long)                 id (PK, Long)
+name (String)                 supplier_id (FK) ──▶ Supplier
+contactEmail (String)         name (String)
+status (SupplierStatus)       description (String)
+createdAt (LocalDateTime)     price (BigDecimal)
+                              stockQuantity (int)
+        1 ──────< N           status (ProductStatus)
+                              createdAt (LocalDateTime)
+```
+
+- **관계:** `Supplier` 1 : N `Product`. `Product.supplier`는 `@ManyToOne` (지연 로딩)
+- **SupplierStatus:** `ACTIVE`, `INACTIVE`
+- **ProductStatus:** `ON_SALE`, `SOLD_OUT`, `HIDDEN`
+- 가격은 `BigDecimal` (통화 계산 정확성 보장)
+
+## 주요 API
+
+| 영역 | 메서드 · 경로 | 설명 |
+|------|--------------|------|
+| 스토어 | `GET /api/products` | 노출 가능한(ON_SALE) 상품 목록 |
+| 스토어 | `GET /api/products/{id}` | 상품 상세 |
+| 어드민 | `GET /api/admin/suppliers` | 공급사 목록 |
+| 어드민 | `POST /api/admin/suppliers` | 공급사 생성 |
+| 어드민 | `PUT /api/admin/suppliers/{id}` | 공급사 수정 |
+| 어드민 | `DELETE /api/admin/suppliers/{id}` | 공급사 삭제 |
+| 어드민 | `GET /api/admin/products?supplierId=` | 공급사별 상품 목록(필터 옵션) |
+| 어드민 | `POST /api/admin/products` | 상품 생성(공급사 지정) |
+| 어드민 | `PUT /api/admin/products/{id}` | 상품 수정 |
+| 어드민 | `DELETE /api/admin/products/{id}` | 상품 삭제 |
