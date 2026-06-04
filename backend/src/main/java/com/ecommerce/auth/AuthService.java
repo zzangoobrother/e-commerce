@@ -25,6 +25,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtEncoder jwtEncoder;
     private final long expirationSeconds;
+    // 타이밍 공격 완화용 — username 부재 시에도 동일한 BCrypt 비용을 치르기 위한 더미 해시
+    private final String dummyHash;
 
     public AuthService(AdminRepository adminRepository,
                        PasswordEncoder passwordEncoder,
@@ -34,13 +36,17 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtEncoder = jwtEncoder;
         this.expirationSeconds = expirationSeconds;
+        this.dummyHash = passwordEncoder.encode("dummy-password-for-timing-mitigation");
     }
 
     // 로그인: 아이디/비밀번호 검증 후 JWT 발급
     public LoginResponse login(LoginRequest request) {
-        Admin admin = adminRepository.findByUsername(request.username())
-                .orElseThrow(() -> new UnauthorizedException(LOGIN_FAIL_MESSAGE));
-
+        Admin admin = adminRepository.findByUsername(request.username()).orElse(null);
+        if (admin == null) {
+            // 계정이 없어도 BCrypt 검증을 수행해 응답 시간으로 계정 존재 여부가 새지 않게 한다
+            passwordEncoder.matches(request.password(), dummyHash);
+            throw new UnauthorizedException(LOGIN_FAIL_MESSAGE);
+        }
         if (!passwordEncoder.matches(request.password(), admin.getPassword())) {
             throw new UnauthorizedException(LOGIN_FAIL_MESSAGE);
         }
