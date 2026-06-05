@@ -2,6 +2,7 @@ package com.ecommerce.auth;
 
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -25,6 +26,13 @@ class AuthControllerTest {
     @Autowired ObjectMapper objectMapper;
     @Autowired AdminRepository adminRepository;
     @Autowired PasswordEncoder passwordEncoder;
+    @Autowired LoginAttemptService loginAttemptService;
+
+    @BeforeEach
+    void resetAttempts() {
+        // 싱글톤 LoginAttemptService의 상태가 다른 테스트로 누적되지 않도록 초기화
+        loginAttemptService.clearAll();
+    }
 
     @AfterEach
     void cleanup() {
@@ -78,5 +86,22 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/admin/login")
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void 동일_IP에서_연속_5회_실패하면_6회째_429를_반환한다() throws Exception {
+        String body = objectMapper.writeValueAsString(
+                Map.of("username", "nobody", "password", "wrong"));
+
+        for (int i = 0; i < 5; i++) {
+            mockMvc.perform(post("/api/admin/login")
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        mockMvc.perform(post("/api/admin/login")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.message").exists());
     }
 }
