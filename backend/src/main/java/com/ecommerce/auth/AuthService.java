@@ -20,6 +20,7 @@ import java.time.Instant;
 public class AuthService {
 
     private static final String LOGIN_FAIL_MESSAGE = "아이디 또는 비밀번호가 올바르지 않습니다.";
+    private static final String DUMMY_PASSWORD = "dummy-password-for-timing-mitigation";
 
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
@@ -36,15 +37,17 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtEncoder = jwtEncoder;
         this.expirationSeconds = expirationSeconds;
-        this.dummyHash = passwordEncoder.encode("dummy-password-for-timing-mitigation");
+        this.dummyHash = passwordEncoder.encode(DUMMY_PASSWORD);
     }
 
     // 로그인: 아이디/비밀번호 검증 후 JWT 발급
     public LoginResponse login(LoginRequest request) {
         Admin admin = adminRepository.findByUsername(request.username()).orElse(null);
         if (admin == null) {
-            // 계정이 없어도 BCrypt 검증을 수행해 응답 시간으로 계정 존재 여부가 새지 않게 한다
-            passwordEncoder.matches(request.password(), dummyHash);
+            // 계정이 없어도 BCrypt 검증을 수행해 응답 시간으로 계정 존재 여부가 새지 않게 한다.
+            // 반환값은 의도적으로 무시하되, JIT가 호출을 제거하지 못하도록 변수에 바인딩한다.
+            @SuppressWarnings("unused")
+            boolean ignored = passwordEncoder.matches(request.password(), dummyHash);
             throw new UnauthorizedException(LOGIN_FAIL_MESSAGE);
         }
         if (!passwordEncoder.matches(request.password(), admin.getPassword())) {
