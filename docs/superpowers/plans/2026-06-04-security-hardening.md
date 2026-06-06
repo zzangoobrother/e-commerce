@@ -1,6 +1,6 @@
 # 보안 보완(Security Hardening) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 어드민 인증의 운영 준비 한계 8건(httpOnly 쿠키 전환, IP 기준 로그인 시도 제한, 타이밍 공격 완화, 만료 토큰 테스트, deprecated API 정리, 테스트 시크릿, 문서 동기화)을 해소한다.
 
@@ -47,7 +47,7 @@
 **Files:**
 - Modify: `backend/src/main/resources/application-test.yml`
 
-- [ ] **Step 1: 테스트 프로파일에 jwt 블록 추가**
+- [x] **Step 1: 테스트 프로파일에 jwt 블록 추가**
 
 `application-test.yml` 끝에 다음을 추가한다(운영 디폴트 시크릿을 테스트가 상속하지 않도록 분리). HS256은 최소 32바이트(256비트) 시크릿이 필요하므로 32자 이상 문자열을 사용한다.
 
@@ -57,12 +57,12 @@ jwt:
   expiration-seconds: 3600
 ```
 
-- [ ] **Step 2: 전체 테스트 실행으로 회귀 없음 확인**
+- [x] **Step 2: 전체 테스트 실행으로 회귀 없음 확인**
 
 Run: `cd backend && ./gradlew test`
 Expected: PASS (기존 모든 테스트 통과 — 테스트가 새 시크릿으로 발급/검증)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/src/main/resources/application-test.yml
@@ -78,12 +78,12 @@ git commit -m "test: 테스트 전용 JWT 시크릿 분리(운영 디폴트 미�
 **Files:**
 - Modify: `backend/src/main/java/com/ecommerce/auth/AuthService.java`
 
-- [ ] **Step 1: 기존 "존재하지 않는 아이디 → 401" 테스트가 통과하는지 확인 (기준선)**
+- [x] **Step 1: 기존 "존재하지 않는 아이디 → 401" 테스트가 통과하는지 확인 (기준선)**
 
 Run: `cd backend && ./gradlew test --tests "com.ecommerce.auth.AuthControllerTest"`
 Expected: PASS (변경 전 기준선 — 이 동작은 변경 후에도 유지되어야 한다)
 
-- [ ] **Step 2: AuthService에 더미 해시 검증 추가**
+- [x] **Step 2: AuthService에 더미 해시 검증 추가**
 
 `AuthService.java`에서 필드와 생성자에 더미 해시를 준비하고, `login`의 username 조회 실패 분기를 수정한다.
 
@@ -116,12 +116,12 @@ Expected: PASS (변경 전 기준선 — 이 동작은 변경 후에도 유지�
 
 (기존의 `Admin admin = adminRepository.findByUsername(...).orElseThrow(...)` 와 그 아래 `if (!passwordEncoder.matches(...))` 블록을 위 코드로 대체한다.)
 
-- [ ] **Step 3: 테스트 실행으로 동작 유지 확인**
+- [x] **Step 3: 테스트 실행으로 동작 유지 확인**
 
 Run: `cd backend && ./gradlew test --tests "com.ecommerce.auth.AuthControllerTest"`
 Expected: PASS (존재하지 않는 아이디·잘못된 비밀번호 모두 여전히 401, 메시지 동일)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/src/main/java/com/ecommerce/auth/AuthService.java
@@ -142,7 +142,7 @@ git commit -m "feat: 로그인 타이밍 공격 완화(계정 부재 시 더미 
 - Modify: `backend/src/main/java/com/ecommerce/auth/AuthController.java`
 - Modify: `backend/src/test/java/com/ecommerce/auth/AuthControllerTest.java`
 
-- [ ] **Step 1: LoginAttemptService 단위 테스트 작성 (실패하는 테스트)**
+- [x] **Step 1: LoginAttemptService 단위 테스트 작성 (실패하는 테스트)**
 
 `backend/src/test/java/com/ecommerce/auth/LoginAttemptServiceTest.java`:
 
@@ -200,12 +200,12 @@ class LoginAttemptServiceTest {
 }
 ```
 
-- [ ] **Step 2: 테스트 실행으로 컴파일 실패 확인**
+- [x] **Step 2: 테스트 실행으로 컴파일 실패 확인**
 
 Run: `cd backend && ./gradlew test --tests "com.ecommerce.auth.LoginAttemptServiceTest"`
 Expected: FAIL (LoginAttemptService 클래스 없음 → 컴파일 에러)
 
-- [ ] **Step 3: LoginAttemptService 구현**
+- [x] **Step 3: LoginAttemptService 구현**
 
 `backend/src/main/java/com/ecommerce/auth/LoginAttemptService.java`:
 
@@ -278,12 +278,12 @@ public class LoginAttemptService {
 }
 ```
 
-- [ ] **Step 4: 단위 테스트 통과 확인**
+- [x] **Step 4: 단위 테스트 통과 확인**
 
 Run: `cd backend && ./gradlew test --tests "com.ecommerce.auth.LoginAttemptServiceTest"`
 Expected: PASS (5개 모두)
 
-- [ ] **Step 5: TooManyAttemptsException + 429 핸들러 추가**
+- [x] **Step 5: TooManyAttemptsException + 429 핸들러 추가**
 
 `backend/src/main/java/com/ecommerce/common/TooManyAttemptsException.java`:
 
@@ -308,7 +308,7 @@ public class TooManyAttemptsException extends RuntimeException {
     }
 ```
 
-- [ ] **Step 6: AuthController에 IP 추출 + 시도 제한 연동**
+- [x] **Step 6: AuthController에 IP 추출 + 시도 제한 연동**
 
 `AuthController.java`를 다음으로 교체한다:
 
@@ -368,7 +368,7 @@ public class AuthController {
 }
 ```
 
-- [ ] **Step 7: AuthControllerTest에 카운터 초기화 + 429 테스트 추가**
+- [x] **Step 7: AuthControllerTest에 카운터 초기화 + 429 테스트 추가**
 
 `AuthControllerTest.java`에 import를 추가한다:
 
@@ -413,12 +413,12 @@ import org.junit.jupiter.api.BeforeEach;
     }
 ```
 
-- [ ] **Step 8: 전체 백엔드 테스트 실행**
+- [x] **Step 8: 전체 백엔드 테스트 실행**
 
 Run: `cd backend && ./gradlew test`
 Expected: PASS (신규 429 테스트 포함 전체 통과. 기존 로그인 실패 테스트가 누적되지 않음을 `clearAll`이 보장)
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add backend/src/main/java/com/ecommerce/auth/LoginAttemptService.java \
@@ -439,7 +439,7 @@ git commit -m "feat: 로그인 시도 제한 추가(IP 기준 5회/15분, 429)"
 **Files:**
 - Modify: `backend/src/test/java/com/ecommerce/common/SecurityProtectionTest.java`
 
-- [ ] **Step 1: 만료 토큰 테스트 작성**
+- [x] **Step 1: 만료 토큰 테스트 작성**
 
 `SecurityProtectionTest.java`에 import를 추가한다:
 
@@ -492,12 +492,12 @@ import java.time.Instant;
     }
 ```
 
-- [ ] **Step 2: 테스트 실행**
+- [x] **Step 2: 테스트 실행**
 
 Run: `cd backend && ./gradlew test --tests "com.ecommerce.common.SecurityProtectionTest"`
 Expected: PASS (만료 토큰 → 401. 기존 동작이 테스트로 고정됨)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/src/test/java/com/ecommerce/common/SecurityProtectionTest.java
@@ -510,29 +510,31 @@ git commit -m "test: 만료 토큰 → 401 경로 테스트 추가"
 
 `SecurityConfig`에서 deprecation 경고가 나는 API를 권장 형태로 교체한다. **정확한 대체 API는 추측하지 말고 실제 경고와 문서를 근거로 적용한다.**
 
+> **실행 결과 메모(2026-06-06):** `-Xlint:deprecation`으로 확인한 결과 **`SecurityConfig`에는 deprecation 경고가 없었다**(Spring Boot 4.0.6 / Spring Security 7에서 현재 DSL이 이미 비-deprecated). 따라서 SecurityConfig는 변경하지 않았다. 대신 ① `build.gradle.kts`에 `-Xlint:deprecation`을 영구 활성화해 가시성을 확보하고, ② lint가 잡아낸 실제 deprecation(테스트 코드의 `JsonNode.asText()` → Jackson 3 권장 `asString()`)을 교체했다. 커밋: `1118aa8`.
+
 **Files:**
 - Modify: `backend/src/main/java/com/ecommerce/common/SecurityConfig.java`
 
-- [ ] **Step 1: deprecation 경고를 실제로 surfacing**
+- [x] **Step 1: deprecation 경고를 실제로 surfacing**
 
 Run: `cd backend && ./gradlew clean compileJava -Dorg.gradle.warning.mode=all`
 또는 컴파일러 lint 활성화 후 빌드해 `SecurityConfig.java`에서 발생하는 deprecation 경고(어느 메서드/라인인지)를 확인한다.
 Expected: 경고 목록에서 deprecated 호출 지점 식별(예: `oauth2ResourceServer`/`jwt`/`csrf` 관련 람다 DSL 중 하나).
 
-- [ ] **Step 2: 권장 대체 API 확인 (문서 근거)**
+- [x] **Step 2: 권장 대체 API 확인 (문서 근거)**
 
 context7 MCP(`mcp__context7__resolve-library-id` → `query-docs`로 "Spring Security 7 SecurityFilterChain DSL deprecation") 또는 공식 문서로 Step 1에서 식별한 메서드의 비-deprecated 대체 형태를 확인한다. 추측 금지 — 문서에 명시된 형태만 사용한다.
 
-- [ ] **Step 3: 식별된 호출을 권장 형태로 교체**
+- [x] **Step 3: 식별된 호출을 권장 형태로 교체**
 
 Step 2에서 확인한 대체 API로 해당 라인만 수정한다. 동작(규칙: `/api/admin/login` permitAll, `/api/admin/**` authenticated, 그 외 permitAll, stateless, CORS, 커스텀 401 EntryPoint)은 동일하게 유지한다.
 
-- [ ] **Step 4: 경고 소멸 + 테스트 통과 확인**
+- [x] **Step 4: 경고 소멸 + 테스트 통과 확인**
 
 Run: `cd backend && ./gradlew clean compileJava -Dorg.gradle.warning.mode=all && ./gradlew test`
 Expected: 해당 deprecation 경고 사라짐 + 전체 테스트 PASS(보호 규칙 회귀 없음)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/main/java/com/ecommerce/common/SecurityConfig.java
@@ -555,12 +557,12 @@ git commit -m "refactor: Spring Security 7 deprecated API 정리(동작 동일)"
 - Modify: `frontend/src/app/admin/suppliers/page.tsx`
 - Modify: `frontend/src/app/admin/products/page.tsx`
 
-- [ ] **Step 1: Next.js 16 문서 확인 (위 필독 항목)**
+- [x] **Step 1: Next.js 16 문서 확인 (위 필독 항목)**
 
 Run: `ls frontend/node_modules/next/dist/docs/` 후 cookies / server-actions / route-handlers 관련 가이드를 읽는다.
 Expected: `cookies().set(name, value, options)`·Server Action·Route Handler API 형태 확정. Step 2~6 코드가 현재 버전과 맞는지 대조(다르면 그 형태로 보정).
 
-- [ ] **Step 2: loginAction Server Action 작성**
+- [x] **Step 2: loginAction Server Action 작성**
 
 `frontend/src/app/admin/login/actions.ts`:
 
@@ -608,7 +610,7 @@ export async function loginAction(
 }
 ```
 
-- [ ] **Step 3: 로그아웃 Route Handler 작성**
+- [x] **Step 3: 로그아웃 Route Handler 작성**
 
 `frontend/src/app/admin/logout/route.ts` — 버튼(POST)과 401 리다이렉트(GET) 모두에서 사용하는 단일 로그아웃 경로:
 
@@ -635,7 +637,7 @@ export function POST(request: Request) {
 }
 ```
 
-- [ ] **Step 4: 로그인 페이지를 useActionState 폼으로 전환**
+- [x] **Step 4: 로그인 페이지를 useActionState 폼으로 전환**
 
 `frontend/src/app/admin/login/page.tsx`를 다음으로 교체(`document.cookie`·`login` 직접 호출 제거):
 
@@ -677,7 +679,7 @@ const inputStyle: CSSProperties = {
 };
 ```
 
-- [ ] **Step 5: LogoutButton을 POST 폼으로 전환**
+- [x] **Step 5: LogoutButton을 POST 폼으로 전환**
 
 `frontend/src/app/admin/LogoutButton.tsx`를 다음으로 교체(`"use client"`·`document.cookie` 제거 — 서버 컴포넌트):
 
@@ -694,7 +696,7 @@ export default function LogoutButton() {
 }
 ```
 
-- [ ] **Step 6: 어드민 페이지의 401 처리를 /admin/logout 경유로 변경**
+- [x] **Step 6: 어드민 페이지의 401 처리를 /admin/logout 경유로 변경**
 
 `frontend/src/app/admin/suppliers/page.tsx`에서 401 catch 블록의 리다이렉트 대상을 바꾼다(토큰 부재 시 `redirect("/admin/login")`은 그대로 — 지울 쿠키가 없음). 401 분기만 교체:
 
@@ -707,12 +709,12 @@ export default function LogoutButton() {
 
 `frontend/src/app/admin/products/page.tsx`도 동일하게 401 분기를 `redirect("/admin/logout")`으로 바꾼다. (해당 파일의 401 처리 패턴을 동일하게 적용. 파일 내 `ApiError`·`redirect` import가 없으면 suppliers/page.tsx와 동일하게 추가한다.)
 
-- [ ] **Step 7: 프로덕션 빌드로 검증**
+- [x] **Step 7: 프로덕션 빌드로 검증**
 
 Run: `cd frontend && npm run build`
 Expected: PASS (`/admin/login`, `/admin/logout` 라우트 등록, 타입 에러 없음)
 
-- [ ] **Step 8: 수동 E2E + httpOnly 확인**
+- [x] **Step 8: 수동 E2E + httpOnly 확인**
 
 1. 백엔드(`cd backend && ./gradlew bootRun`)와 프론트(`cd frontend && npm run dev`) 기동.
 2. `/admin` 접근 → `/admin/login` 리다이렉트 확인.
@@ -721,7 +723,7 @@ Expected: PASS (`/admin/login`, `/admin/logout` 라우트 등록, 타입 에러 
 5. 로그아웃 → 쿠키 삭제 + `/admin/login` 이동 확인.
 Expected: 위 5개 모두 충족.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add frontend/src/app/admin/login/actions.ts \
@@ -744,7 +746,7 @@ git commit -m "feat: 어드민 토큰 httpOnly 쿠키 전환(Server Action)·로
 - Modify: `docs/superpowers/specs/2026-06-03-admin-auth-design.md` (9장)
 - Modify: `docs/ROADMAP.md`
 
-- [ ] **Step 1: README 보안 섹션을 정본으로 갱신**
+- [x] **Step 1: README 보안 섹션을 정본으로 갱신**
 
 `README.md`의 보안 한계 섹션에서, 이번 사이클로 해소된 항목을 "해결됨(2026-06-04 보안 보완 사이클)"로 표시하고 남은 항목과 분리한다.
 - 해결됨: httpOnly 쿠키(+SameSite=Lax) 전환, 로그인 시도 제한(IP 5회/15분), 타이밍 공격 완화, 401/로그아웃 시 쿠키 삭제
@@ -752,23 +754,23 @@ git commit -m "feat: 어드민 토큰 httpOnly 쿠키 전환(Server Action)·로
 
 (README의 정확한 현재 문구는 파일을 열어 확인 후, 위 분류에 맞게 항목을 이동/표시한다.)
 
-- [ ] **Step 2: 인증 스펙 9장을 README 참조로 정리**
+- [x] **Step 2: 인증 스펙 9장을 README 참조로 정리**
 
 `2026-06-03-admin-auth-design.md`의 9장 "보안 고려사항 및 골격 한계"에서 중복 목록을 줄이고, "최신 보안 한계 현황은 README의 보안 섹션을 단일 출처로 한다"는 참조 문구를 추가한다. 9장에 이번 사이클(2026-06-04)로 해소된 항목이라는 한 줄 메모를 남긴다.
 
-- [ ] **Step 3: ROADMAP 후보 1 표 동기화**
+- [x] **Step 3: ROADMAP 후보 1 표 동기화**
 
 `docs/ROADMAP.md`에서:
 - "완료된 사이클" 표에 사이클 4(보안 보완, 2026-06-04, 핵심 8건) 행을 추가하고, 어드민 인증 사이클 상태를 실제 머지 상태에 맞게 갱신한다.
 - "다음 사이클 후보 > 후보 1" 표에서 이번에 해소된 항목(httpOnly, 401 쿠키 삭제, 시도 제한, 타이밍 완화, 문서 동기화, 만료토큰 테스트, deprecated 정리, 테스트 시크릿)을 제거하고, 남은 항목(리프레시 토큰)만 후보로 남기거나 별도 후보로 승격한다.
 - "운영 배포 전 체크리스트"의 "보안 보완 사이클(후보 1) 완료" 항목을 체크 처리한다.
 
-- [ ] **Step 4: 문서 일관성 육안 확인**
+- [x] **Step 4: 문서 일관성 육안 확인**
 
 Run: `grep -n "httpOnly\|시도 제한\|타이밍\|리프레시" README.md docs/ROADMAP.md docs/superpowers/specs/2026-06-03-admin-auth-design.md`
 Expected: 해소 항목이 세 문서에서 모순 없이 일치(해결됨/남음 분류 동일).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add README.md docs/ROADMAP.md docs/superpowers/specs/2026-06-03-admin-auth-design.md
@@ -779,10 +781,10 @@ git commit -m "docs: 보안 한계 문서 단일 출처화(README 정본)·해�
 
 ## 최종 검증 (Definition of Done)
 
-- [ ] `cd backend && ./gradlew test` 전체 통과
-- [ ] `cd frontend && npm run build` 통과
-- [ ] DevTools에서 `admin_token`이 HttpOnly 플래그 보유 + `document.cookie`로 안 읽힘
-- [ ] 동일 IP 6회 로그인 실패 → 429
-- [ ] 로그아웃·만료 토큰 시 쿠키 비워지고 `/admin/login` 이동
-- [ ] `./gradlew compileJava -Dorg.gradle.warning.mode=all`에서 SecurityConfig deprecation 경고 없음
-- [ ] README/스펙/ROADMAP 보안 한계 기술 일치
+- [x] `cd backend && ./gradlew test` 전체 통과
+- [x] `cd frontend && npm run build` 통과
+- [x] DevTools에서 `admin_token`이 HttpOnly 플래그 보유 + `document.cookie`로 안 읽힘
+- [x] 동일 IP 6회 로그인 실패 → 429
+- [x] 로그아웃·만료 토큰 시 쿠키 비워지고 `/admin/login` 이동
+- [x] `./gradlew compileJava -Dorg.gradle.warning.mode=all`에서 SecurityConfig deprecation 경고 없음
+- [x] README/스펙/ROADMAP 보안 한계 기술 일치
