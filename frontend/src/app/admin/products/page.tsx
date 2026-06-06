@@ -28,9 +28,9 @@ export default async function AdminProductsPage({
       getAdminProducts(token, selectedId),
     ]);
   } catch (err) {
-    // 401 = 토큰 만료/무효 → 로그인 페이지로
+    // 401 = 토큰 만료/무효 → 쿠키 삭제 후 로그인 페이지로 (/admin/logout 경유)
     if (err instanceof ApiError && err.status === 401) {
-      redirect("/admin/login");
+      redirect("/admin/logout");
     }
     return <main style={{ padding: 24 }}><p>백엔드 연결 실패</p></main>;
   }
