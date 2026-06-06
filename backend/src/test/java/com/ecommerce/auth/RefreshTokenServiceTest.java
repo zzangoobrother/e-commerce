@@ -37,6 +37,23 @@ class RefreshTokenServiceTest {
     }
 
     @Test
+    void 재사용_탐지는_다른_admin의_토큰을_무효화하지_않는다() {
+        RefreshTokenService service = service(Instant::now);
+        Admin other = adminRepository.save(new Admin("other", "encoded-pw"));
+        IssuedToken otherToken = service.issue(other);
+
+        // admin의 토큰을 회전시킨 뒤 옛 토큰을 재사용해 admin 전체 무효화를 트리거한다
+        IssuedToken first = service.issue(admin);
+        service.rotate(first.token());
+        assertThatThrownBy(() -> service.rotate(first.token()))
+                .isInstanceOf(UnauthorizedException.class);
+
+        // 다른 admin(other)의 토큰은 영향받지 않고 정상 회전된다
+        RotationResult result = service.rotate(otherToken.token());
+        assertThat(result.admin().getId()).isEqualTo(other.getId());
+    }
+
+    @Test
     void 발급한_토큰의_만료시각은_발급시각에_7일을_더한_값이다() {
         Instant fixed = Instant.parse("2026-06-06T00:00:00Z");
         RefreshTokenService service = service(() -> fixed);

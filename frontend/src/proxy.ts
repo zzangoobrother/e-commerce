@@ -20,7 +20,8 @@ export function proxy(request: NextRequest) {
 
   if (request.cookies.has(REFRESH_COOKIE)) {
     const url = new URL("/admin/refresh", request.url);
-    url.searchParams.set("next", pathname);
+    // pathname뿐 아니라 쿼리(예: ?supplierId=5)까지 보존해 갱신 후 원래 화면으로 복귀
+    url.searchParams.set("next", pathname + request.nextUrl.search);
     return NextResponse.redirect(url);
   }
 

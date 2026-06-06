@@ -21,7 +21,7 @@ export default async function AdminSuppliersPage() {
   } catch (err) {
     // 401 = access 만료/무효 → 자동 갱신 시도(/admin/refresh). 갱신 실패 시 그쪽에서 로그아웃 처리.
     if (err instanceof ApiError && err.status === 401) {
-      redirect("/admin/refresh?next=/admin/suppliers");
+      redirect(`/admin/refresh?next=${encodeURIComponent("/admin/suppliers")}`);
     }
     return <main style={{ padding: 24 }}><p>백엔드 연결 실패</p></main>;
   }

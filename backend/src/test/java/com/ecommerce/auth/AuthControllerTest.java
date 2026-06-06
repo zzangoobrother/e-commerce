@@ -173,6 +173,24 @@ class AuthControllerTest {
                 .andExpect(status().isNoContent());
     }
 
+    @Test
+    void 리프레시로_받은_새_access로_보호된_API에_접근할_수_있다() throws Exception {
+        adminRepository.save(new Admin("admin", passwordEncoder.encode("admin1234")));
+        String refreshToken = loginAndGetRefreshToken("admin", "admin1234");
+
+        String body = objectMapper.writeValueAsString(Map.of("refreshToken", refreshToken));
+        String refreshed = mockMvc.perform(post("/api/admin/refresh")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String newAccess = objectMapper.readTree(refreshed).get("accessToken").asString();
+
+        // 회전으로 받은 새 access 토큰으로 보호된 어드민 API 접근 성공
+        mockMvc.perform(get("/api/admin/suppliers")
+                        .header("Authorization", "Bearer " + newAccess))
+                .andExpect(status().isOk());
+    }
+
     // 로그인 후 응답에서 refreshToken 값을 추출하는 헬퍼
     private String loginAndGetRefreshToken(String username, String password) throws Exception {
         String loginBody = objectMapper.writeValueAsString(
