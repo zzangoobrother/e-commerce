@@ -68,8 +68,8 @@ public class RefreshTokenService {
             throw new UnauthorizedException(INVALID_REFRESH);
         }
 
-        // issue() 내부 deleteExpiredByAdmin의 clearAutomatically=true가 영속성 컨텍스트를
-        // 비우면 stored가 detached된다. clear 전에 admin lazy 로드를 명시적으로 확정한다.
+        // admin은 findByTokenHash의 @EntityGraph로 이미 fetch되어 있다.
+        // issue() 호출에 전달할 변수로 명시적으로 바인딩한다.
         Admin admin = stored.getAdmin();
         stored.revoke();
         IssuedToken refresh = issue(admin);

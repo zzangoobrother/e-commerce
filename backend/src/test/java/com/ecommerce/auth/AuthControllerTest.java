@@ -144,6 +144,35 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void 회전으로_발급된_새_refresh_토큰은_다시_사용할_수_있다() throws Exception {
+        adminRepository.save(new Admin("admin", passwordEncoder.encode("admin1234")));
+        String refreshToken = loginAndGetRefreshToken("admin", "admin1234");
+
+        String firstBody = objectMapper.writeValueAsString(Map.of("refreshToken", refreshToken));
+        String refreshed = mockMvc.perform(post("/api/admin/refresh")
+                        .contentType(MediaType.APPLICATION_JSON).content(firstBody))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String newRefreshToken = objectMapper.readTree(refreshed).get("refreshToken").asString();
+
+        // 회전으로 발급된 새 토큰은 정상적으로 다시 리프레시에 사용 가능
+        String secondBody = objectMapper.writeValueAsString(Map.of("refreshToken", newRefreshToken));
+        mockMvc.perform(post("/api/admin/refresh")
+                        .contentType(MediaType.APPLICATION_JSON).content(secondBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").exists());
+    }
+
+    @Test
+    void 존재하지_않는_refresh로_로그아웃해도_204를_반환한다() throws Exception {
+        // revoke()는 ifPresent로 멱등 — 미존재 토큰에도 예외 없이 204
+        String body = objectMapper.writeValueAsString(Map.of("refreshToken", "nonexistent-token"));
+        mockMvc.perform(post("/api/admin/logout")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNoContent());
+    }
+
     // 로그인 후 응답에서 refreshToken 값을 추출하는 헬퍼
     private String loginAndGetRefreshToken(String username, String password) throws Exception {
         String loginBody = objectMapper.writeValueAsString(
