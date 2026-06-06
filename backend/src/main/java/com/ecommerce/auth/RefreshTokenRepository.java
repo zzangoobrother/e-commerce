@@ -1,5 +1,6 @@
 package com.ecommerce.auth;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +11,8 @@ import java.util.Optional;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 
+    // admin을 JOIN FETCH로 즉시 로드 — clearAutomatically 이후 detached 되어도 필드 접근 가능하게
+    @EntityGraph(attributePaths = "admin")
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
     // 재사용 탐지 시 해당 admin의 살아있는 토큰을 일괄 폐기

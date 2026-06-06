@@ -1,5 +1,6 @@
 package com.ecommerce.auth;
 
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +55,8 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").exists())
                 .andExpect(jsonPath("$.accessExpiresAt").exists())
-                .andExpect(jsonPath("$.refreshToken").exists());
+                .andExpect(jsonPath("$.refreshToken").exists())
+                .andExpect(jsonPath("$.refreshExpiresAt").exists());
     }
 
     @Test
@@ -106,5 +108,51 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void 리프레시하면_새_토큰을_발급하고_옛_refresh는_무효화된다() throws Exception {
+        adminRepository.save(new Admin("admin", passwordEncoder.encode("admin1234")));
+        String refreshToken = loginAndGetRefreshToken("admin", "admin1234");
+
+        String body = objectMapper.writeValueAsString(Map.of("refreshToken", refreshToken));
+        mockMvc.perform(post("/api/admin/refresh")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.refreshToken").exists());
+
+        // 이미 회전된 이전 refresh 토큰은 재사용 불가 (재사용 탐지)
+        mockMvc.perform(post("/api/admin/refresh")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void 로그아웃하면_refresh가_폐기되어_이후_리프레시가_거부된다() throws Exception {
+        adminRepository.save(new Admin("admin", passwordEncoder.encode("admin1234")));
+        String refreshToken = loginAndGetRefreshToken("admin", "admin1234");
+        String body = objectMapper.writeValueAsString(Map.of("refreshToken", refreshToken));
+
+        mockMvc.perform(post("/api/admin/logout")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNoContent());
+
+        // 로그아웃 후 동일 refresh 토큰으로 리프레시 시도 → 거부
+        mockMvc.perform(post("/api/admin/refresh")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // 로그인 후 응답에서 refreshToken 값을 추출하는 헬퍼
+    private String loginAndGetRefreshToken(String username, String password) throws Exception {
+        String loginBody = objectMapper.writeValueAsString(
+                Map.of("username", username, "password", password));
+        String response = mockMvc.perform(post("/api/admin/login")
+                        .contentType(MediaType.APPLICATION_JSON).content(loginBody))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode node = objectMapper.readTree(response);
+        return node.get("refreshToken").asString();
     }
 }
