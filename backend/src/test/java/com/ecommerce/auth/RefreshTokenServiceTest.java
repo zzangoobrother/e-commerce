@@ -37,6 +37,26 @@ class RefreshTokenServiceTest {
     }
 
     @Test
+    void 발급한_토큰의_만료시각은_발급시각에_7일을_더한_값이다() {
+        Instant fixed = Instant.parse("2026-06-06T00:00:00Z");
+        RefreshTokenService service = service(() -> fixed);
+
+        IssuedToken token = service.issue(admin);
+
+        assertThat(token.expiresAt()).isEqualTo(fixed.plusSeconds(SEVEN_DAYS));
+    }
+
+    @Test
+    void 회전_결과의_admin은_토큰을_발급한_admin과_동일하다() {
+        RefreshTokenService service = service(Instant::now);
+        IssuedToken first = service.issue(admin);
+
+        RotationResult result = service.rotate(first.token());
+
+        assertThat(result.admin().getId()).isEqualTo(admin.getId());
+    }
+
+    @Test
     void 발급한_토큰으로_회전하면_새_토큰을_반환하고_옛_토큰은_무효화된다() {
         RefreshTokenService service = service(Instant::now);
         IssuedToken first = service.issue(admin);
