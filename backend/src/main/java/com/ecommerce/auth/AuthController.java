@@ -1,7 +1,7 @@
 package com.ecommerce.auth;
 
 import com.ecommerce.auth.dto.LoginRequest;
-import com.ecommerce.auth.dto.LoginResponse;
+import com.ecommerce.auth.dto.TokenResponse;
 import com.ecommerce.common.TooManyAttemptsException;
 import com.ecommerce.common.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,13 +27,13 @@ public class AuthController {
     }
 
     @PostMapping
-    public LoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+    public TokenResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
         String ip = clientIp(http);
         if (loginAttemptService.isBlocked(ip)) {
             throw new TooManyAttemptsException(BLOCKED_MESSAGE);
         }
         try {
-            LoginResponse response = authService.login(request);
+            TokenResponse response = authService.login(request);
             loginAttemptService.reset(ip);
             return response;
         } catch (UnauthorizedException e) {

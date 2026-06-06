@@ -25,6 +25,7 @@ class AuthControllerTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired AdminRepository adminRepository;
+    @Autowired RefreshTokenRepository refreshTokenRepository;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired LoginAttemptService loginAttemptService;
 
@@ -36,7 +37,8 @@ class AuthControllerTest {
 
     @AfterEach
     void cleanup() {
-        // 각 테스트 후 데이터 정리 — 다른 테스트와의 격리
+        // refresh_tokens → admins 순서로 삭제 (FK 제약 위반 방지)
+        refreshTokenRepository.deleteAll();
         adminRepository.deleteAll();
     }
 
@@ -50,8 +52,9 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/admin/login")
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").exists())
-                .andExpect(jsonPath("$.expiresAt").exists());
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.accessExpiresAt").exists())
+                .andExpect(jsonPath("$.refreshToken").exists());
     }
 
     @Test

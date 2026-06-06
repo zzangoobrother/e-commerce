@@ -3,6 +3,7 @@ package com.ecommerce.common;
 import com.ecommerce.auth.Admin;
 import com.ecommerce.auth.AdminRepository;
 import com.ecommerce.auth.LoginAttemptService;
+import com.ecommerce.auth.RefreshTokenRepository;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,7 @@ class SecurityProtectionTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired AdminRepository adminRepository;
+    @Autowired RefreshTokenRepository refreshTokenRepository;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired JwtEncoder jwtEncoder;
     @Autowired LoginAttemptService loginAttemptService;
@@ -48,6 +50,8 @@ class SecurityProtectionTest {
 
     @AfterEach
     void cleanup() {
+        // refresh_tokens → admins 순서로 삭제 (FK 제약 위반 방지)
+        refreshTokenRepository.deleteAll();
         adminRepository.deleteAll();
     }
 
@@ -99,7 +103,7 @@ class SecurityProtectionTest {
                         .contentType(MediaType.APPLICATION_JSON).content(loginBody))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-        String token = objectMapper.readTree(response).get("token").asString();
+        String token = objectMapper.readTree(response).get("accessToken").asString();
 
         // 발급받은 실제 토큰으로 보호된 API 접근 (발급→검증 왕복 검증)
         mockMvc.perform(get("/api/admin/suppliers")

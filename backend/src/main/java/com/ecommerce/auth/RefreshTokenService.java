@@ -1,6 +1,7 @@
 package com.ecommerce.auth;
 
 import com.ecommerce.common.UnauthorizedException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,8 @@ public class RefreshTokenService {
     private final Supplier<Instant> clock;
     private final SecureRandom random = new SecureRandom();
 
+    // Spring DI용 기본 생성자 — 생성자가 2개이므로 @Autowired로 기본 생성자를 명시
+    @Autowired
     public RefreshTokenService(RefreshTokenRepository repository,
                                @Value("${refresh.expiration-seconds:604800}") long refreshSeconds) {
         this(repository, refreshSeconds, Instant::now);
