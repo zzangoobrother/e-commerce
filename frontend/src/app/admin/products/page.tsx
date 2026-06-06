@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { CSSProperties } from "react";
 import { getAdminProducts, getSuppliers, ApiError } from "@/lib/api";
+import { ACCESS_COOKIE } from "@/lib/auth-cookies";
 import LogoutButton from "../LogoutButton";
 
 // 어드민 공급사별 상품 목록 페이지 (supplierId 쿼리 파라미터로 필터)
@@ -13,7 +14,7 @@ export default async function AdminProductsPage({
 }) {
   // 쿠키에서 토큰 읽기 (없으면 로그인으로 — proxy의 2차 방어)
   const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token")?.value;
+  const token = cookieStore.get(ACCESS_COOKIE)?.value;
   if (!token) {
     redirect("/admin/login");
   }
@@ -28,9 +29,13 @@ export default async function AdminProductsPage({
       getAdminProducts(token, selectedId),
     ]);
   } catch (err) {
-    // 401 = 토큰 만료/무효 → 쿠키 삭제 후 로그인 페이지로 (/admin/logout 경유)
+    // 401 = access 만료/무효 → 자동 갱신 시도(/admin/refresh). 갱신 실패 시 그쪽에서 로그아웃 처리.
+    // next에 쿼리(supplierId)를 담으므로 encodeURIComponent로 감싸 중첩 쿼리 분리를 막는다.
     if (err instanceof ApiError && err.status === 401) {
-      redirect("/admin/logout");
+      const next = selectedId
+        ? `/admin/products?supplierId=${selectedId}`
+        : "/admin/products";
+      redirect(`/admin/refresh?next=${encodeURIComponent(next)}`);
     }
     return <main style={{ padding: 24 }}><p>백엔드 연결 실패</p></main>;
   }

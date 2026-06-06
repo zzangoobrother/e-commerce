@@ -1,22 +1,31 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/auth-cookies";
 
-// 어드민 경로 보호 — 토큰 쿠키가 없으면 로그인 페이지로 리다이렉트
-// (토큰 유효성/만료 검증은 백엔드 책임 — 여기서는 존재 여부만 확인하는 1차 방어)
+// 인증 자체 경로는 보호하지 않는다(리다이렉트 루프 방지)
+const PUBLIC_PATHS = ["/admin/login", "/admin/refresh", "/admin/logout"];
+
+// 어드민 경로 보호 — access 쿠키 유무로 1차 판정.
+// access 없음 + refresh 있음 → 자동 갱신(/admin/refresh)로. 둘 다 없음 → 로그인.
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 로그인 페이지 자신은 보호하지 않음
-  if (pathname === "/admin/login") {
+  if (PUBLIC_PATHS.includes(pathname)) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get("admin_token");
-  if (!token) {
-    return NextResponse.redirect(new URL("/admin/login", request.url));
+  if (request.cookies.has(ACCESS_COOKIE)) {
+    return NextResponse.next();
   }
 
-  return NextResponse.next();
+  if (request.cookies.has(REFRESH_COOKIE)) {
+    const url = new URL("/admin/refresh", request.url);
+    // pathname뿐 아니라 쿼리(예: ?supplierId=5)까지 보존해 갱신 후 원래 화면으로 복귀
+    url.searchParams.set("next", pathname + request.nextUrl.search);
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.redirect(new URL("/admin/login", request.url));
 }
 
 export const config = {

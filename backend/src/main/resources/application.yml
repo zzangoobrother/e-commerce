@@ -23,7 +23,11 @@ server:
 jwt:
   # HS256 서명용 시크릿 — 최소 32바이트(256비트) 필요. 운영에서는 반드시 환경변수로 교체
   secret: ${JWT_SECRET:dev-only-secret-key-change-me-in-production-1234}
-  expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+  expiration-seconds: ${JWT_EXPIRATION_SECONDS:900}
+
+refresh:
+  # 리프레시 토큰 수명 — 7일(604800초)
+  expiration-seconds: ${REFRESH_EXPIRATION_SECONDS:604800}
 
 admin:
   seed:

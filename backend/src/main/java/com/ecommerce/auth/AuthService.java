@@ -1,7 +1,9 @@
 package com.ecommerce.auth;
 
+import com.ecommerce.auth.RefreshTokenService.IssuedToken;
+import com.ecommerce.auth.RefreshTokenService.RotationResult;
 import com.ecommerce.auth.dto.LoginRequest;
-import com.ecommerce.auth.dto.LoginResponse;
+import com.ecommerce.auth.dto.TokenResponse;
 import com.ecommerce.common.UnauthorizedException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,6 +27,7 @@ public class AuthService {
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtEncoder jwtEncoder;
+    private final RefreshTokenService refreshTokenService;
     private final long expirationSeconds;
     // 타이밍 공격 완화용 — username 부재 시에도 동일한 BCrypt 비용을 치르기 위한 더미 해시
     private final String dummyHash;
@@ -32,20 +35,22 @@ public class AuthService {
     public AuthService(AdminRepository adminRepository,
                        PasswordEncoder passwordEncoder,
                        JwtEncoder jwtEncoder,
+                       RefreshTokenService refreshTokenService,
                        @Value("${jwt.expiration-seconds}") long expirationSeconds) {
         this.adminRepository = adminRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtEncoder = jwtEncoder;
+        this.refreshTokenService = refreshTokenService;
         this.expirationSeconds = expirationSeconds;
         this.dummyHash = passwordEncoder.encode(DUMMY_PASSWORD);
     }
 
-    // 로그인: 아이디/비밀번호 검증 후 JWT 발급
-    public LoginResponse login(LoginRequest request) {
+    // 로그인: 자격 검증 후 access(JWT) + refresh(opaque) 발급
+    @Transactional
+    public TokenResponse login(LoginRequest request) {
         Admin admin = adminRepository.findByUsername(request.username()).orElse(null);
         if (admin == null) {
             // 계정이 없어도 BCrypt 검증을 수행해 응답 시간으로 계정 존재 여부가 새지 않게 한다.
-            // 반환값은 의도적으로 무시하되, JIT가 호출을 제거하지 못하도록 변수에 바인딩한다.
             @SuppressWarnings("unused")
             boolean ignored = passwordEncoder.matches(request.password(), dummyHash);
             throw new UnauthorizedException(LOGIN_FAIL_MESSAGE);
@@ -53,19 +58,41 @@ public class AuthService {
         if (!passwordEncoder.matches(request.password(), admin.getPassword())) {
             throw new UnauthorizedException(LOGIN_FAIL_MESSAGE);
         }
+        return issueTokens(admin);
+    }
 
+    // 리프레시: refresh 회전 후 새 access + refresh 발급
+    @Transactional
+    public TokenResponse refresh(String refreshToken) {
+        RotationResult result = refreshTokenService.rotate(refreshToken);
         Instant now = Instant.now();
-        Instant expiresAt = now.plusSeconds(expirationSeconds);
+        Instant accessExpiresAt = now.plusSeconds(expirationSeconds);
+        String accessToken = encodeAccess(result.admin(), now, accessExpiresAt);
+        return new TokenResponse(accessToken, accessExpiresAt,
+                result.refresh().token(), result.refresh().expiresAt());
+    }
 
+    // 로그아웃: refresh 폐기
+    @Transactional
+    public void logout(String refreshToken) {
+        refreshTokenService.revoke(refreshToken);
+    }
+
+    private TokenResponse issueTokens(Admin admin) {
+        Instant now = Instant.now();
+        Instant accessExpiresAt = now.plusSeconds(expirationSeconds);
+        String accessToken = encodeAccess(admin, now, accessExpiresAt);
+        IssuedToken refresh = refreshTokenService.issue(admin);
+        return new TokenResponse(accessToken, accessExpiresAt, refresh.token(), refresh.expiresAt());
+    }
+
+    private String encodeAccess(Admin admin, Instant issuedAt, Instant expiresAt) {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(admin.getUsername())
-                .issuedAt(now)
+                .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .build();
-
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
-        String token = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
-
-        return new LoginResponse(token, expiresAt);
+        return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }
 }

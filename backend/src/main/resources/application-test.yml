@@ -14,4 +14,7 @@ spring:
 jwt:
   # 테스트 전용 고정 시크릿 — 운영 환경변수 미사용, HS256 최소 32바이트 보장
   secret: test-only-secret-key-not-for-production-0123456789
-  expiration-seconds: 3600
+  expiration-seconds: 900
+
+refresh:
+  expiration-seconds: 604800

@@ -3,13 +3,14 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { CSSProperties } from "react";
 import { getSuppliers, ApiError } from "@/lib/api";
+import { ACCESS_COOKIE } from "@/lib/auth-cookies";
 import LogoutButton from "../LogoutButton";
 
 // 어드민 공급사 목록 페이지
 export default async function AdminSuppliersPage() {
   // 쿠키에서 토큰 읽기 (없으면 로그인으로 — proxy의 2차 방어)
   const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token")?.value;
+  const token = cookieStore.get(ACCESS_COOKIE)?.value;
   if (!token) {
     redirect("/admin/login");
   }
@@ -18,9 +19,9 @@ export default async function AdminSuppliersPage() {
   try {
     suppliers = await getSuppliers(token);
   } catch (err) {
-    // 401 = 토큰 만료/무효 → 쿠키 삭제 후 로그인 페이지로 (/admin/logout 경유)
+    // 401 = access 만료/무효 → 자동 갱신 시도(/admin/refresh). 갱신 실패 시 그쪽에서 로그아웃 처리.
     if (err instanceof ApiError && err.status === 401) {
-      redirect("/admin/logout");
+      redirect(`/admin/refresh?next=${encodeURIComponent("/admin/suppliers")}`);
     }
     return <main style={{ padding: 24 }}><p>백엔드 연결 실패</p></main>;
   }

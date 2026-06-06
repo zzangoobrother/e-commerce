@@ -22,3 +22,6 @@ spring:
   h2:
     console:
       enabled: true
+
+refresh:
+  expiration-seconds: 604800

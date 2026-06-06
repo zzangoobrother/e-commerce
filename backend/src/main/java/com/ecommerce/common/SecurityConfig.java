@@ -45,8 +45,9 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // 로그인은 인증 없이 허용
-                        .requestMatchers(HttpMethod.POST, "/api/admin/login").permitAll()
+                        // 로그인/리프레시/로그아웃은 인증 없이 허용 (refresh 토큰이 자격 증명)
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/admin/login", "/api/admin/refresh", "/api/admin/logout").permitAll()
                         // 나머지 어드민 API는 JWT 필수
                         .requestMatchers("/api/admin/**").authenticated()
                         // 스토어 API 등 그 외는 모두 개방
