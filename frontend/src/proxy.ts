@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/auth-cookies";
 
 // 인증 자체 경로는 보호하지 않는다(리다이렉트 루프 방지)
 const PUBLIC_PATHS = ["/admin/login", "/admin/refresh", "/admin/logout"];
@@ -13,11 +14,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (request.cookies.has("admin_token")) {
+  if (request.cookies.has(ACCESS_COOKIE)) {
     return NextResponse.next();
   }
 
-  if (request.cookies.has("admin_refresh")) {
+  if (request.cookies.has(REFRESH_COOKIE)) {
     const url = new URL("/admin/refresh", request.url);
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);

@@ -3,13 +3,14 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { CSSProperties } from "react";
 import { getSuppliers, ApiError } from "@/lib/api";
+import { ACCESS_COOKIE } from "@/lib/auth-cookies";
 import LogoutButton from "../LogoutButton";
 
 // 어드민 공급사 목록 페이지
 export default async function AdminSuppliersPage() {
   // 쿠키에서 토큰 읽기 (없으면 로그인으로 — proxy의 2차 방어)
   const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token")?.value;
+  const token = cookieStore.get(ACCESS_COOKIE)?.value;
   if (!token) {
     redirect("/admin/login");
   }
