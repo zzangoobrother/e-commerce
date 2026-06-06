@@ -9,50 +9,51 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
-// 로그인 시도 제한 — IP 기준 인메모리 카운터.
+// 로그인 시도 제한 — IP 기준 인메모리 고정 윈도우 카운터.
+// 윈도우(기본 15분) 내 maxAttempts회 실패 시 윈도우가 끝날 때까지 차단하고, 윈도우 만료 시 자동 리셋한다.
 // 단일 인스턴스 한정(다중 인스턴스 배포 시 인스턴스별로 카운트됨 — README 보안 한계 참고).
 @Service
 public class LoginAttemptService {
 
     private final int maxAttempts;
-    private final long lockoutSeconds;
+    private final long windowSeconds;
     private final Supplier<Instant> clock;
     private final Map<String, Attempt> attempts = new ConcurrentHashMap<>();
 
-    // 실패 누적 횟수와 잠금 만료 시각(미잠금이면 null)
-    private record Attempt(int count, Instant lockedUntil) {}
+    // 현재 윈도우의 실패 누적 횟수와 윈도우 만료 시각
+    private record Attempt(int count, Instant windowExpiry) {}
 
     @Autowired
     public LoginAttemptService(
             @Value("${login.max-attempts:5}") int maxAttempts,
-            @Value("${login.lockout-seconds:900}") long lockoutSeconds) {
-        this(maxAttempts, lockoutSeconds, Instant::now);
+            @Value("${login.window-seconds:900}") long windowSeconds) {
+        this(maxAttempts, windowSeconds, Instant::now);
     }
 
-    // 테스트용 — 시각 공급자를 주입해 잠금 만료를 결정적으로 검증
-    LoginAttemptService(int maxAttempts, long lockoutSeconds, Supplier<Instant> clock) {
+    // 테스트용 — 시각 공급자를 주입해 윈도우 만료를 결정적으로 검증
+    LoginAttemptService(int maxAttempts, long windowSeconds, Supplier<Instant> clock) {
         this.maxAttempts = maxAttempts;
-        this.lockoutSeconds = lockoutSeconds;
+        this.windowSeconds = windowSeconds;
         this.clock = clock;
     }
 
-    // 현재 해당 IP가 잠금 상태인지
+    // 현재 해당 IP가 차단 상태인지 — 윈도우가 살아있고 실패 누적이 임계값 이상
     public boolean isBlocked(String ip) {
         Attempt attempt = attempts.get(ip);
         return attempt != null
-                && attempt.lockedUntil() != null
-                && clock.get().isBefore(attempt.lockedUntil());
+                && clock.get().isBefore(attempt.windowExpiry())
+                && attempt.count() >= maxAttempts;
     }
 
-    // 실패 1회 기록. 임계값 도달 시 잠금. 잠금이 이미 만료됐으면 카운트를 새로 시작한다.
+    // 실패 1회 기록. 윈도우가 없거나 만료됐으면 새 윈도우를 시작하고, 아니면 같은 윈도우에서 누적한다.
     public void recordFailure(String ip) {
         attempts.compute(ip, (key, prev) -> {
             Instant now = clock.get();
-            boolean expired = prev != null && prev.lockedUntil() != null && !now.isBefore(prev.lockedUntil());
-            int prevCount = (prev == null || expired) ? 0 : prev.count();
-            int count = prevCount + 1;
-            Instant lockedUntil = count >= maxAttempts ? now.plusSeconds(lockoutSeconds) : null;
-            return new Attempt(count, lockedUntil);
+            boolean newWindow = prev == null || !now.isBefore(prev.windowExpiry());
+            if (newWindow) {
+                return new Attempt(1, now.plusSeconds(windowSeconds));
+            }
+            return new Attempt(prev.count() + 1, prev.windowExpiry());
         });
     }
 
