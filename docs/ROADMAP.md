@@ -8,8 +8,8 @@
 |--------|------|------|------|
 | 1. 이커머스 골격 | 2026-05-31 ~ 06-03 | 모노레포(Spring Boot 4 + Next.js 16 + MySQL), Supplier/Product 도메인, 스토어/어드민 화면, 시드 | main 머지됨 (PR #1, #2) |
 | 2. 골격 후속 정리 | 2026-06-03 | create() 이중 세팅 제거, 공급사명 유니크 제약, DB 설정 환경변수화, 메타데이터 한국어화 | main 머지됨 (PR #3) |
-| 3. 어드민 인증 | 2026-06-03 | JWT 로그인(HS256), `/api/admin/**` Bearer 보호, 어드민 시드, 로그인 화면, proxy.ts 경로 보호, 로그아웃 | `feature/admin-auth` 브랜치 (머지 대기) |
-| 4. 보안 보완 | 2026-06-04 | httpOnly 쿠키 전환, 401/로그아웃 쿠키 삭제, 로그인 시도 제한(IP 기준 5회/15분), 타이밍 공격 완화, 만료 토큰 401 테스트, deprecated API 정리, JWT 시크릿 분리, 문서 단일 출처화 (핵심 8건) | `feature/admin-auth` 브랜치 (머지 대기) |
+| 3. 어드민 인증 | 2026-06-03 | JWT 로그인(HS256), `/api/admin/**` Bearer 보호, 어드민 시드, 로그인 화면, proxy.ts 경로 보호, 로그아웃 | main 머지됨 (PR #4~#6) |
+| 4. 보안 보완 | 2026-06-04 | httpOnly 쿠키 전환, 401/로그아웃 쿠키 삭제, 로그인 시도 제한(IP 기준 5회/15분), 타이밍 공격 완화, 만료 토큰 401 테스트, deprecated API 정리, JWT 시크릿 분리, 문서 단일 출처화 (핵심 8건) | main 머지됨 (PR #7) |
 | 5. 토큰 수명 주기 | 2026-06-06 | access 15분 stateless + refresh 7일 opaque(MySQL 해시 저장), 회전·재사용 탐지, 로그아웃 시 서버 refresh 폐기, 401 자동 갱신(/api/admin/refresh), 프론트 쿠키 2개 운영 | `feature/token-lifecycle` 브랜치 (머지 대기) |
 
 각 사이클의 상세 설계/플랜: `docs/superpowers/specs/`, `docs/superpowers/plans/`
