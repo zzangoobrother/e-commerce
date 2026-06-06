@@ -99,7 +99,7 @@ class SecurityProtectionTest {
                         .contentType(MediaType.APPLICATION_JSON).content(loginBody))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-        String token = objectMapper.readTree(response).get("token").asText();
+        String token = objectMapper.readTree(response).get("token").asString();
 
         // 발급받은 실제 토큰으로 보호된 API 접근 (발급→검증 왕복 검증)
         mockMvc.perform(get("/api/admin/suppliers")
