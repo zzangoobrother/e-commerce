@@ -13,9 +13,10 @@
 3. 프론트: `cd frontend && npm install && npm run dev` (http://localhost:3000)
 4. 접속: 스토어 http://localhost:3000 · 어드민 http://localhost:3000/admin
 
-> **어드민 인증:** 어드민 화면/API는 JWT 로그인이 필요하다. 기본 계정은 `admin` / `admin1234`
+> **어드민 인증:** 어드민 화면/API는 JWT 로그인이 필요하다(role: ADMIN). 기본 계정은 `admin` / `admin1234`
 > (환경변수 `ADMIN_USERNAME` / `ADMIN_PASSWORD`로 변경 가능). 로그인: http://localhost:3000/admin/login
-> 스토어 화면/API는 인증 없이 접근 가능하다.
+
+> **고객 인증:** 스토어 고객은 회원가입(/register) · 로그인(/login)이 가능하다. 가입 즉시 자동 로그인. 어드민과 JWT role(ADMIN/CUSTOMER)로 권한 분리 — 고객 토큰으로 어드민 API 접근 시 403 반환. 상품 목록·상세 등 조회 API는 인증 없이 접근 가능하다.
 
 > **기존 로컬 DB 볼륨이 있는 경우:** 공급사명 유니크 제약이 추가되어 기존 볼륨에는 자동
 > 적용되지 않을 수 있다. `docker compose down -v && docker compose up -d`로 볼륨을
@@ -59,6 +60,10 @@ createdAt (LocalDateTime)     price (BigDecimal)
 |------|--------------|------|
 | 스토어 | `GET /api/products` | 노출 가능한(ON_SALE) 상품 목록 |
 | 스토어 | `GET /api/products/{id}` | 상품 상세 |
+| 고객 | `POST /api/store/auth/register` | 고객 회원가입 (가입 즉시 auto-login) — 인증 불필요 |
+| 고객 | `POST /api/store/auth/login` | 고객 로그인 (JWT 발급) — 인증 불필요 |
+| 고객 | `POST /api/store/auth/logout` | 고객 로그아웃 (서버 refresh 폐기) |
+| 고객 | `POST /api/store/auth/refresh` | 고객 access 토큰 갱신 |
 | 어드민 | `POST /api/admin/login` | 어드민 로그인 (JWT 발급) — 인증 불필요 |
 | 어드민 | `GET /api/admin/suppliers` | 공급사 목록 |
 | 어드민 | `POST /api/admin/suppliers` | 공급사 생성 |
@@ -91,3 +96,4 @@ createdAt (LocalDateTime)     price (BigDecimal)
 
 - 로그인 시도 제한이 인메모리라 다중 인스턴스 배포 시 인스턴스별로 카운트된다 (Redis 등 공유 저장소 도입 필요)
 - refresh 회전 동시성(race) 미처리 — 단일 어드민 가정으로 현재는 허용
+- refresh 토큰을 다형 소유(ownerType+ownerId)로 일반화하며 **DB 외래키(참조 무결성)를 포기**했다 (어드민·고객 이종 소유자를 단일 FK로 가리킬 수 없어, 정합성은 애플리케이션 코드가 보장)
