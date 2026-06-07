@@ -24,6 +24,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.Instant;
 import java.util.Map;
 
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -70,7 +72,8 @@ class SecurityProtectionTest {
 
     @Test
     void 모의_JWT로_어드민_API에_접근한다() throws Exception {
-        mockMvc.perform(get("/api/admin/suppliers").with(jwt()))
+        mockMvc.perform(get("/api/admin/suppliers")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isOk());
     }
 
@@ -89,6 +92,25 @@ class SecurityProtectionTest {
         mockMvc.perform(get("/api/admin/suppliers")
                         .header("Authorization", "Bearer " + expiredToken))
                 .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void 고객_JWT로_어드민_API_접근시_차단된다() throws Exception {
+        // role=CUSTOMER 클레임을 가진 실제 서명 JWT — 인증은 되지만 ADMIN 권한이 없어 403
+        Instant now = Instant.now();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .subject("customer@example.com")
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(900))
+                .claim("role", "CUSTOMER")
+                .build();
+        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
+        String customerToken = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
+
+        mockMvc.perform(get("/api/admin/suppliers")
+                        .header("Authorization", "Bearer " + customerToken))
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").exists());
     }
 

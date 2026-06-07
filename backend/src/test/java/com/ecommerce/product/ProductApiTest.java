@@ -14,6 +14,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
 
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -49,7 +51,7 @@ class ProductApiTest {
                 "stockQuantity", 10,
                 "status", "ON_SALE"));
 
-        mockMvc.perform(post("/api/admin/products").with(jwt())
+        mockMvc.perform(post("/api/admin/products").with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("사과"))
@@ -57,7 +59,7 @@ class ProductApiTest {
                 .andExpect(jsonPath("$.supplierName").value("공급사A"));
 
         // 공급사별 조회
-        mockMvc.perform(get("/api/admin/products").with(jwt())
+        mockMvc.perform(get("/api/admin/products").with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
                         .param("supplierId", String.valueOf(supplier.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("사과"));
@@ -82,7 +84,7 @@ class ProductApiTest {
                 "stockQuantity", 5,
                 "status", "HIDDEN"));
 
-        mockMvc.perform(post("/api/admin/products").with(jwt())
+        mockMvc.perform(post("/api/admin/products").with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("HIDDEN"));
