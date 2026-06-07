@@ -1,7 +1,12 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { getProducts } from "@/lib/api";
+import { CUSTOMER_ACCESS_COOKIE } from "@/lib/auth-cookies";
 
 export default async function HomePage() {
+  // 고객 로그인 상태 확인 — 쿠키 유무로 분기
+  const isLoggedIn = (await cookies()).has(CUSTOMER_ACCESS_COOKIE);
+
   let products;
   try {
     products = await getProducts();
@@ -16,9 +21,24 @@ export default async function HomePage() {
 
   return (
     <main style={{ padding: 24 }}>
-      <header style={{ display: "flex", justifyContent: "space-between" }}>
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1>스토어</h1>
-        <Link href="/admin">어드민 →</Link>
+        <nav style={{ display: "flex", gap: 12 }}>
+          {isLoggedIn ? (
+            // GET <Link>는 프리페치로 의도치 않게 로그아웃될 수 있어 POST 폼으로 호출(어드민 패턴과 동일)
+            <form action="/logout" method="post" style={{ margin: 0 }}>
+              <button type="submit" style={{ padding: "4px 12px", cursor: "pointer" }}>
+                로그아웃
+              </button>
+            </form>
+          ) : (
+            <>
+              <Link href="/login">로그인</Link>
+              <Link href="/register">회원가입</Link>
+            </>
+          )}
+          <Link href="/admin">어드민 →</Link>
+        </nav>
       </header>
       <ul style={{ display: "grid", gap: 12, listStyle: "none", padding: 0 }}>
         {products.map((p) => (
