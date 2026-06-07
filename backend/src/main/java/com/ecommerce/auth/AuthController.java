@@ -3,6 +3,7 @@ package com.ecommerce.auth;
 import com.ecommerce.auth.dto.LoginRequest;
 import com.ecommerce.auth.dto.RefreshRequest;
 import com.ecommerce.auth.dto.TokenResponse;
+import com.ecommerce.common.ClientIp;
 import com.ecommerce.common.TooManyAttemptsException;
 import com.ecommerce.common.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,7 +32,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public TokenResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
-        String ip = clientIp(http);
+        String ip = ClientIp.from(http);
         if (loginAttemptService.isBlocked(ip)) {
             throw new TooManyAttemptsException(BLOCKED_MESSAGE);
         }
@@ -55,13 +56,5 @@ public class AuthController {
     public void logout(@Valid @RequestBody RefreshRequest request) {
         authService.logout(request.refreshToken());
     }
-
-    // 클라이언트 IP 추출 — 프록시 뒤에서는 X-Forwarded-For 첫 항목, 없으면 원격 주소
-    private String clientIp(HttpServletRequest http) {
-        String forwarded = http.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return http.getRemoteAddr();
-    }
 }
+
