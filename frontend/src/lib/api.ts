@@ -110,3 +110,49 @@ export async function logout(refreshToken: string): Promise<void> {
     cache: "no-store",
   });
 }
+
+// 고객 회원가입 — 성공 시 auto-login 토큰(201)
+export async function registerCustomer(
+  email: string,
+  password: string,
+): Promise<TokenResponse> {
+  const res = await fetch(`${API_BASE}/api/store/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new ApiError(res.status, data?.message ?? `회원가입 실패 (${res.status})`);
+  }
+  return res.json() as Promise<TokenResponse>;
+}
+
+// 고객 로그인
+export async function customerLogin(
+  email: string,
+  password: string,
+): Promise<TokenResponse> {
+  const res = await fetch(`${API_BASE}/api/store/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new ApiError(res.status, data?.message ?? `로그인 실패 (${res.status})`);
+  }
+  return res.json() as Promise<TokenResponse>;
+}
+
+// 고객 로그아웃 — refresh 토큰 서버 폐기(204). 실패해도 쿠키 삭제는 호출자가 진행
+export async function customerLogout(refreshToken: string): Promise<void> {
+  await fetch(`${API_BASE}/api/store/auth/logout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+    cache: "no-store",
+  });
+}
