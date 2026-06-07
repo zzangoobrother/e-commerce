@@ -2,6 +2,7 @@ package com.ecommerce.auth;
 
 import com.ecommerce.auth.RefreshTokenService.IssuedToken;
 import com.ecommerce.auth.RefreshTokenService.RotationResult;
+import com.ecommerce.auth.RefreshTokenService.TokenOwner;
 import com.ecommerce.auth.dto.LoginRequest;
 import com.ecommerce.auth.dto.TokenResponse;
 import com.ecommerce.common.UnauthorizedException;
@@ -22,6 +23,7 @@ import java.time.Instant;
 public class AuthService {
 
     private static final String LOGIN_FAIL_MESSAGE = "아이디 또는 비밀번호가 올바르지 않습니다.";
+    private static final String INVALID_REFRESH_MESSAGE = "리프레시 토큰이 유효하지 않습니다.";
     private static final String DUMMY_PASSWORD = "dummy-password-for-timing-mitigation";
 
     private final AdminRepository adminRepository;
@@ -61,13 +63,20 @@ public class AuthService {
         return issueTokens(admin);
     }
 
-    // 리프레시: refresh 회전 후 새 access + refresh 발급
+    // 리프레시: refresh 회전 후 새 access + refresh 발급 (어드민 토큰만 허용)
     @Transactional
     public TokenResponse refresh(String refreshToken) {
         RotationResult result = refreshTokenService.rotate(refreshToken);
+        // 어드민 토큰이 아니면 예외를 던져 이 트랜잭션(rotate 회전 포함)을 통째로 롤백한다
+        // — 고객 토큰이 어드민 리프레시 경로에서 조용히 소비되지 않도록 보장.
+        if (result.owner().type() != OwnerType.ADMIN) {
+            throw new UnauthorizedException(INVALID_REFRESH_MESSAGE);
+        }
+        Admin admin = adminRepository.findById(result.owner().id())
+                .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH_MESSAGE));
         Instant now = Instant.now();
         Instant accessExpiresAt = now.plusSeconds(expirationSeconds);
-        String accessToken = encodeAccess(result.admin(), now, accessExpiresAt);
+        String accessToken = encodeAccess(admin, now, accessExpiresAt);
         return new TokenResponse(accessToken, accessExpiresAt,
                 result.refresh().token(), result.refresh().expiresAt());
     }
@@ -82,7 +91,7 @@ public class AuthService {
         Instant now = Instant.now();
         Instant accessExpiresAt = now.plusSeconds(expirationSeconds);
         String accessToken = encodeAccess(admin, now, accessExpiresAt);
-        IssuedToken refresh = refreshTokenService.issue(admin);
+        IssuedToken refresh = refreshTokenService.issue(new TokenOwner(OwnerType.ADMIN, admin.getId()));
         return new TokenResponse(accessToken, accessExpiresAt, refresh.token(), refresh.expiresAt());
     }
 
@@ -91,6 +100,7 @@ public class AuthService {
                 .subject(admin.getUsername())
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
+                .claim("role", "ADMIN")
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
