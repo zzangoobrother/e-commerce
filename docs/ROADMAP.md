@@ -1,6 +1,6 @@
 # 이커머스 프로젝트 로드맵
 
-> 마지막 갱신: 2026-06-07 (고객 인증 사이클 문서 동기화)
+> 마지막 갱신: 2026-06-10 (재사용 탐지 롤백 결함 수정 사이클)
 
 ## 완료된 사이클
 
@@ -12,7 +12,8 @@
 | 4. 보안 보완 | 2026-06-04 | httpOnly 쿠키 전환, 401/로그아웃 쿠키 삭제, 로그인 시도 제한(IP 기준 5회/15분), 타이밍 공격 완화, 만료 토큰 401 테스트, deprecated API 정리, JWT 시크릿 분리, 문서 단일 출처화 (핵심 8건) | main 머지됨 (PR #7) |
 | 5. 토큰 수명 주기 | 2026-06-06 | access 15분 stateless + refresh 7일 opaque(MySQL 해시 저장), 회전·재사용 탐지, 로그아웃 시 서버 refresh 폐기, 401 자동 갱신(/api/admin/refresh), 프론트 쿠키 2개 운영 | main 머지됨 (PR #8) |
 | 6. 보안 보완 3차 | 2026-06-06 | 로그인 시도 제한 고정 윈도우 전환(무기한 누적 약점 제거) | main 머지됨 (PR #9) |
-| 7. 고객 인증 | 2026-06-07 | 고객 회원가입/로그인/로그아웃, refresh 토큰 다형 소유 일반화(어드민/고객 공유), JWT role 클레임으로 어드민/고객 권한 분리(고객 토큰 어드민 API 차단), 가입 auto-login | `feature/customer-auth` 브랜치 (머지 대기) |
+| 7. 고객 인증 | 2026-06-07 | 고객 회원가입/로그인/로그아웃, refresh 토큰 다형 소유 일반화(어드민/고객 공유), JWT role 클레임으로 어드민/고객 권한 분리(고객 토큰 어드민 API 차단), 가입 auto-login | main 머지됨 (PR #10) |
+| 8. 재사용 탐지 롤백 결함 수정 | 2026-06-10 | refresh 재사용 탐지의 일괄 폐기가 같은 트랜잭션 예외 롤백으로 유실되던 잠복 결함 수정(TokenTheftResponder, REQUIRES_NEW 분리), @SpringBootTest 커밋 경계 회귀 테스트 | `feature/refresh-reuse-rollback-fix` 브랜치 (머지 대기) |
 
 각 사이클의 상세 설계/플랜: `docs/superpowers/specs/`, `docs/superpowers/plans/`
 
