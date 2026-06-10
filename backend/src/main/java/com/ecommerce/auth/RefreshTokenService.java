@@ -16,7 +16,7 @@ import java.util.HexFormat;
 import java.util.function.Supplier;
 
 // 리프레시 토큰 서비스 — opaque 토큰 발급(해시 저장), 회전, 재사용 탐지, 폐기.
-// 단일 인스턴스/단일 어드민 가정(동시 회전 race는 README 한계 참고).
+// 소유자 무관(어드민/고객) — (ownerType, ownerId)로 격리한다. 단일 인스턴스 가정.
 @Service
 public class RefreshTokenService {
 
@@ -27,7 +27,7 @@ public class RefreshTokenService {
     private final Supplier<Instant> clock;
     private final SecureRandom random = new SecureRandom();
 
-    // Spring DI용 기본 생성자 — 생성자가 2개이므로 @Autowired로 기본 생성자를 명시
+    // Spring DI용 — 생성자가 2개이므로 @Autowired로 명시
     @Autowired
     public RefreshTokenService(RefreshTokenRepository repository,
                                @Value("${refresh.expiration-seconds:604800}") long refreshSeconds) {
@@ -43,12 +43,12 @@ public class RefreshTokenService {
 
     // 새 refresh 토큰 발급 — 평문 토큰은 반환값으로만 1회 노출, DB엔 해시 저장
     @Transactional
-    public IssuedToken issue(Admin admin) {
+    public IssuedToken issue(TokenOwner owner) {
         Instant now = clock.get();
-        repository.deleteExpiredByAdmin(admin, now);
+        repository.deleteExpiredByOwner(owner.type(), owner.id(), now);
         String token = generateToken();
         Instant expiresAt = now.plusSeconds(refreshSeconds);
-        repository.save(new RefreshToken(admin, hash(token), expiresAt, now));
+        repository.save(new RefreshToken(owner.type(), owner.id(), hash(token), expiresAt, now));
         return new IssuedToken(token, expiresAt);
     }
 
@@ -60,20 +60,19 @@ public class RefreshTokenService {
                 .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH));
 
         if (stored.isRevoked()) {
-            // 이미 폐기된 토큰 재제출 = 탈취 정황 → 해당 admin의 살아있는 토큰을 전부 폐기
-            repository.revokeAllByAdmin(stored.getAdmin());
+            // 이미 폐기된 토큰 재제출 = 탈취 정황 → 해당 owner의 살아있는 토큰을 전부 폐기
+            repository.revokeAllByOwner(stored.getOwnerType(), stored.getOwnerId());
             throw new UnauthorizedException(INVALID_REFRESH);
         }
         if (!now.isBefore(stored.getExpiresAt())) {
             throw new UnauthorizedException(INVALID_REFRESH);
         }
 
-        // admin은 findByTokenHash의 @EntityGraph로 이미 fetch되어 있다.
-        // issue() 호출에 전달할 변수로 명시적으로 바인딩한다.
-        Admin admin = stored.getAdmin();
+        // owner를 plain 값으로 바인딩 — issue()의 clearAutomatically 이후에도 안전
+        TokenOwner owner = new TokenOwner(stored.getOwnerType(), stored.getOwnerId());
         stored.revoke();
-        IssuedToken refresh = issue(admin);
-        return new RotationResult(admin, refresh);
+        IssuedToken refresh = issue(owner);
+        return new RotationResult(owner, refresh);
     }
 
     // 로그아웃 — 제출된 토큰을 폐기(미존재/중복이어도 멱등)
@@ -98,9 +97,12 @@ public class RefreshTokenService {
         }
     }
 
+    // 토큰 소유자 신원 — 어드민/고객 + 엔티티 id
+    public record TokenOwner(OwnerType type, Long id) {}
+
     // 발급 결과 — 평문 토큰과 만료 시각
     public record IssuedToken(String token, Instant expiresAt) {}
 
-    // 회전 결과 — 토큰 소유 admin과 새 refresh
-    public record RotationResult(Admin admin, IssuedToken refresh) {}
+    // 회전 결과 — 토큰 소유자와 새 refresh
+    public record RotationResult(TokenOwner owner, IssuedToken refresh) {}
 }

@@ -8,6 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -34,7 +36,7 @@ class GlobalExceptionHandlerTest {
                 {"name": "", "contactEmail": "x@example.com", "status": "ACTIVE"}
                 """;
 
-        mockMvc.perform(post("/api/admin/suppliers").with(jwt())
+        mockMvc.perform(post("/api/admin/suppliers").with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")))
                         .contentType(MediaType.APPLICATION_JSON).content(invalidBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").exists());

@@ -26,6 +26,7 @@ class AuthControllerTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
     @Autowired AdminRepository adminRepository;
+    @Autowired CustomerRepository customerRepository;
     @Autowired RefreshTokenRepository refreshTokenRepository;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired LoginAttemptService loginAttemptService;
@@ -40,6 +41,7 @@ class AuthControllerTest {
     void cleanup() {
         // refresh_tokens → admins 순서로 삭제 (FK 제약 위반 방지)
         refreshTokenRepository.deleteAll();
+        customerRepository.deleteAll();
         adminRepository.deleteAll();
     }
 
@@ -189,6 +191,22 @@ class AuthControllerTest {
         mockMvc.perform(get("/api/admin/suppliers")
                         .header("Authorization", "Bearer " + newAccess))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void 고객_refresh_토큰을_어드민_리프레시_경로에_쓰면_401이다() throws Exception {
+        String regBody = objectMapper.writeValueAsString(
+                Map.of("email", "user@example.com", "password", "pw12345678"));
+        String resp = mockMvc.perform(post("/api/store/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(regBody))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String customerRefresh = objectMapper.readTree(resp).get("refreshToken").asString();
+        String body = objectMapper.writeValueAsString(Map.of("refreshToken", customerRefresh));
+
+        mockMvc.perform(post("/api/admin/refresh")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
     }
 
     // 로그인 후 응답에서 refreshToken 값을 추출하는 헬퍼
