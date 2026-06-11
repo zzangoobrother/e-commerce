@@ -32,6 +32,19 @@ export interface TokenResponse {
   refreshExpiresAt: string;
 }
 
+export interface CartItem {
+  productId: number;
+  productName: string;
+  price: number;
+  quantity: number;
+  lineTotal: number;
+}
+
+export interface Cart {
+  items: CartItem[];
+  totalPrice: number;
+}
+
 // HTTP 상태 코드를 보존하는 API 에러 (401 구분용)
 export class ApiError extends Error {
   constructor(
@@ -50,6 +63,29 @@ async function getJson<T>(path: string, token?: string): Promise<T> {
     throw new ApiError(res.status, `API 요청 실패 (${res.status}): ${path}`);
   }
   return res.json() as Promise<T>;
+}
+
+// 인증 변경 요청 공통 처리 — 실패 시 서버 메시지를 보존한 ApiError, 204는 본문 없음
+async function sendJson<T>(
+  path: string,
+  method: "POST" | "PATCH" | "DELETE",
+  token: string,
+  body?: unknown,
+): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new ApiError(res.status, data?.message ?? `API 요청 실패 (${res.status}): ${path}`);
+  }
+  return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
 // 스토어 (인증 불필요)
@@ -156,3 +192,26 @@ export async function customerLogout(refreshToken: string): Promise<void> {
     cache: "no-store",
   });
 }
+
+// 고객 리프레시 — customer refresh 토큰으로 새 access+refresh 발급
+export async function customerRefresh(refreshToken: string): Promise<TokenResponse> {
+  const res = await fetch(`${API_BASE}/api/store/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, `리프레시 실패 (${res.status})`);
+  }
+  return res.json() as Promise<TokenResponse>;
+}
+
+// 장바구니 (고객 Bearer 토큰 필요)
+export const getCart = (token: string) => getJson<Cart>("/api/store/cart", token);
+export const addCartItem = (token: string, productId: number, quantity: number) =>
+  sendJson<Cart>("/api/store/cart/items", "POST", token, { productId, quantity });
+export const updateCartItemQuantity = (token: string, productId: number, quantity: number) =>
+  sendJson<Cart>(`/api/store/cart/items/${productId}`, "PATCH", token, { quantity });
+export const removeCartItem = (token: string, productId: number) =>
+  sendJson<void>(`/api/store/cart/items/${productId}`, "DELETE", token);

@@ -54,6 +54,8 @@ public class SecurityConfig {
                                 "/api/admin/login", "/api/admin/refresh", "/api/admin/logout").permitAll()
                         // 나머지 어드민 API는 ADMIN 권한 필수 (고객 토큰 접근 차단)
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // 장바구니는 고객 전용 (어드민 토큰 403)
+                        .requestMatchers("/api/store/cart/**").hasRole("CUSTOMER")
                         // 스토어 API·고객 인증(/api/store/auth/**) 등 그 외는 모두 개방
                         .anyRequest().permitAll())
                 // Bearer 토큰(JWT) 검증 — role 클레임을 권한으로 변환
