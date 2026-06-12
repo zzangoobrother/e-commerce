@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getProduct } from "@/lib/api";
+import AddToCartForm from "./AddToCartForm";
 
 export default async function ProductDetailPage({
   params,
@@ -27,6 +28,9 @@ export default async function ProductDetailPage({
       <p><strong>{product.price.toLocaleString()}원</strong></p>
       <p>재고: {product.stockQuantity}개</p>
       <p>공급사: {product.supplierName}</p>
+      {product.status === "ON_SALE" && (
+        <AddToCartForm productId={product.id} maxQuantity={product.stockQuantity} />
+      )}
     </main>
   );
 }
