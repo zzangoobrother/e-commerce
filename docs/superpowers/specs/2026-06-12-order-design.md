@@ -38,7 +38,7 @@ orders                                  ← "order"는 SQL 예약어라 테이�
 
 order_items
 - id            PK
-- order_id      FK → orders, NOT NULL   ← @ManyToOne(LAZY), Order의 @OneToMany(cascade=PERSIST)
+- order_id      FK → orders, NOT NULL   ← @ManyToOne(LAZY), Order의 @OneToMany(cascade=ALL, orphanRemoval)
 - product_id    BIGINT NOT NULL         ← 스칼라, FK 없음 (아래 참조 전략)
 - product_name  VARCHAR NOT NULL        ← 스냅샷
 - price         DECIMAL NOT NULL        ← 주문 시점 단가 스냅샷
@@ -48,7 +48,7 @@ order_items
 - `Order.cancel()` 도메인 메서드: 이미 `CANCELLED`면 `BadRequestException`.
 - `lineTotal`은 저장하지 않고 DTO에서 `price × quantity` 계산(중복 저장 배제).
 
-**장바구니(플랫)와 달리 Order는 애그리거트로 간다:** CartItem은 항목이 독립적으로 추가·삭제되므로 플랫이 맞았지만, OrderItem은 주문과 함께 생성되고 함께 조회되며 개별 수정이 없다. `Order`에 `@OneToMany(mappedBy, cascade = PERSIST) List<OrderItem>`.
+**장바구니(플랫)와 달리 Order는 애그리거트로 간다:** CartItem은 항목이 독립적으로 추가·삭제되므로 플랫이 맞았지만, OrderItem은 주문과 함께 생성되고 함께 조회되며 개별 수정이 없다. `Order`에 `@OneToMany(mappedBy, cascade = ALL, orphanRemoval = true) List<OrderItem>` — 항목 생명주기가 주문에 완전히 종속(저장·삭제 함께).
 
 **상품 참조 전략 — 수명에 따라 분리:**
 - **주문(영구 이력)**: `product_id`에 FK를 걸지 않는다. FK가 있으면 상품 삭제가 주문 이력에 영원히 막힌다. 스냅샷(이름·가격)이 있어 상품이 사라져도 주문 표시는 온전하다.
@@ -140,7 +140,7 @@ order_items
   - 빈 장바구니 400
   - 취소 200 — 재고 복원 / 중복 취소 400 / 타인 주문 404 / 삭제된 상품 항목은 복원 스킵
   - 비인증 401, 어드민 토큰 403, 고객 간 주문 격리
-- **`AdminProductControllerTest` 보강** — 장바구니에 담긴 상품 삭제 시 cart_items 함께 삭제(409 아님), 주문 이력은 영향 없음.
+- **`ProductApiTest` 보강** (어드민 상품 API의 기존 테스트 파일) — 장바구니에 담긴 상품 삭제 시 cart_items 함께 삭제(409 아님), 주문 이력은 영향 없음.
 - **동시성은 테스트하지 않는다** — 스레드 경쟁 테스트는 플레이키 위험이 커서 제외. 락 순서 규칙(productId 오름차순)은 본 스펙과 코드 리뷰로 고정.
 - **프론트**: `npm run build && npm run lint` — `/orders` 라우트 등록, 타입 에러 없음.
 
