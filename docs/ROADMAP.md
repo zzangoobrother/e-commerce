@@ -1,6 +1,6 @@
 # 이커머스 프로젝트 로드맵
 
-> 마지막 갱신: 2026-06-12 (장바구니 사이클 문서 동기화)
+> 마지막 갱신: 2026-06-12 (장바구니 사이클 main 머지 반영)
 
 ## 완료된 사이클
 
@@ -14,7 +14,7 @@
 | 6. 보안 보완 3차 | 2026-06-06 | 로그인 시도 제한 고정 윈도우 전환(무기한 누적 약점 제거) | main 머지됨 (PR #9) |
 | 7. 고객 인증 | 2026-06-07 | 고객 회원가입/로그인/로그아웃, refresh 토큰 다형 소유 일반화(어드민/고객 공유), JWT role 클레임으로 어드민/고객 권한 분리(고객 토큰 어드민 API 차단), 가입 auto-login | main 머지됨 (PR #10) |
 | 8. 재사용 탐지 롤백 결함 수정 | 2026-06-10 | refresh 재사용 탐지의 일괄 폐기가 같은 트랜잭션 예외 롤백으로 유실되던 잠복 결함 수정(TokenTheftResponder, REQUIRES_NEW 분리), @SpringBootTest 커밋 경계 회귀 테스트 | `feature/refresh-reuse-rollback-fix` 브랜치 (머지 대기) |
-| 9. 장바구니 | 2026-06-12 | CartItem 플랫 모델(재담기 수량 가산), 고객 전용 보호(`hasRole('CUSTOMER')`), 고객 보호 인프라(자동 갱신 `/refresh`·proxy `/cart` 보호), 담기/수량변경/삭제/조회 UI | `feature/cart` 브랜치 (머지 대기) |
+| 9. 장바구니 | 2026-06-12 | CartItem 플랫 모델(재담기 수량 가산), 고객 전용 보호(`hasRole('CUSTOMER')`), 고객 보호 인프라(자동 갱신 `/refresh`·proxy `/cart` 보호), 담기/수량변경/삭제/조회 UI | main 머지됨 (PR #13) |
 
 각 사이클의 상세 설계/플랜: `docs/superpowers/specs/`, `docs/superpowers/plans/`
 
