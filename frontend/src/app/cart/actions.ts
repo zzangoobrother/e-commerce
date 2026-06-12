@@ -13,22 +13,24 @@ export async function updateQuantityAction(formData: FormData) {
   const productId = Number(formData.get("productId"));
   const quantity = Number(formData.get("quantity"));
 
+  // access 만료(쿠키 자동 소멸) 시 갱신 후 /cart 복귀 — refresh도 없으면 /refresh 라우트가 로그인으로 보낸다
   const token = (await cookies()).get(CUSTOMER_ACCESS_COOKIE)?.value;
   if (!token) {
-    redirect("/login");
+    redirect("/refresh?next=/cart");
   }
 
+  let unauthorized = false;
   let errorMessage: string | null = null;
   try {
     await updateCartItemQuantity(token, productId, quantity);
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) {
-      errorMessage = "AUTH";
+      unauthorized = true;
     } else {
       errorMessage = err instanceof Error ? err.message : "수량 변경에 실패했습니다.";
     }
   }
-  if (errorMessage === "AUTH") {
+  if (unauthorized) {
     redirect("/refresh?next=/cart");
   }
   if (errorMessage !== null) {
@@ -43,9 +45,10 @@ export async function updateQuantityAction(formData: FormData) {
 export async function removeItemAction(formData: FormData) {
   const productId = Number(formData.get("productId"));
 
+  // access 만료(쿠키 자동 소멸) 시 갱신 후 /cart 복귀 — refresh도 없으면 /refresh 라우트가 로그인으로 보낸다
   const token = (await cookies()).get(CUSTOMER_ACCESS_COOKIE)?.value;
   if (!token) {
-    redirect("/login");
+    redirect("/refresh?next=/cart");
   }
 
   await removeCartItem(token, productId).catch(() => {});

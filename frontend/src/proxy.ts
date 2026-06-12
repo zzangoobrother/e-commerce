@@ -20,6 +20,11 @@ function guard(
   refreshPath: string,
   loginPath: string,
 ) {
+  // Server Action POST는 가로채지 않는다 — 307 리다이렉트가 메서드를 보존해
+  // GET 전용 /refresh에 POST로 꽂혀 405가 나기 때문. 토큰 검증은 액션 자신이 한다.
+  if (request.method !== "GET") {
+    return NextResponse.next();
+  }
   if (request.cookies.has(accessCookie)) {
     return NextResponse.next();
   }
