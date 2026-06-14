@@ -75,6 +75,16 @@ public class Product {
         this.supplier = supplier;
     }
 
+    // 재고 차감 — 호출부(주문 서비스)가 PESSIMISTIC_WRITE 잠금 하에 상한 검증 후 호출한다
+    public void decreaseStock(int quantity) {
+        this.stockQuantity -= quantity;
+    }
+
+    // 재고 복원 (주문 취소)
+    public void increaseStock(int quantity) {
+        this.stockQuantity += quantity;
+    }
+
     public Long getId() { return id; }
     public Supplier getSupplier() { return supplier; }
     public String getName() { return name; }
