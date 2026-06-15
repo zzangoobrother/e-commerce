@@ -1,5 +1,6 @@
 package com.ecommerce.product;
 
+import com.ecommerce.cart.CartItemRepository;
 import com.ecommerce.common.NotFoundException;
 import com.ecommerce.product.dto.ProductRequest;
 import com.ecommerce.supplier.Supplier;
@@ -15,11 +16,14 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
+    private final CartItemRepository cartItemRepository;
 
     public ProductService(ProductRepository productRepository,
-                          SupplierRepository supplierRepository) {
+                          SupplierRepository supplierRepository,
+                          CartItemRepository cartItemRepository) {
         this.productRepository = productRepository;
         this.supplierRepository = supplierRepository;
+        this.cartItemRepository = cartItemRepository;
     }
 
     // 스토어: 판매중 상품만
@@ -64,6 +68,9 @@ public class ProductService {
         if (!productRepository.existsById(id)) {
             throw new NotFoundException("상품을 찾을 수 없습니다: " + id);
         }
+        // 장바구니는 임시 데이터라 상품과 함께 제거 — FK 위반(부정확한 409) 방지.
+        // 주문 이력(order_items)은 FK 없는 스냅샷이라 영향 없다.
+        cartItemRepository.deleteByProductId(id);
         productRepository.deleteById(id);
     }
 
