@@ -45,6 +45,35 @@ export interface Cart {
   totalPrice: number;
 }
 
+export type OrderStatus = "ORDERED" | "CANCELLED";
+
+export interface OrderItem {
+  productId: number;
+  productName: string;
+  price: number;
+  quantity: number;
+  lineTotal: number;
+}
+
+export interface Order {
+  id: number;
+  status: OrderStatus;
+  totalPrice: number;
+  createdAt: string;
+  items: OrderItem[];
+}
+
+export interface ExcludedItem {
+  productId: number;
+  productName: string;
+  reason: string;
+}
+
+export interface CreateOrderResult {
+  order: Order;
+  excludedItems: ExcludedItem[];
+}
+
 // HTTP 상태 코드를 보존하는 API 에러 (401 구분용)
 export class ApiError extends Error {
   constructor(
@@ -215,3 +244,10 @@ export const updateCartItemQuantity = (token: string, productId: number, quantit
   sendJson<Cart>(`/api/store/cart/items/${productId}`, "PATCH", token, { quantity });
 export const removeCartItem = (token: string, productId: number) =>
   sendJson<void>(`/api/store/cart/items/${productId}`, "DELETE", token);
+
+// 주문 (고객 Bearer 토큰 필요)
+export const createOrder = (token: string) =>
+  sendJson<CreateOrderResult>("/api/store/orders", "POST", token);
+export const getOrders = (token: string) => getJson<Order[]>("/api/store/orders", token);
+export const cancelOrder = (token: string, orderId: number) =>
+  sendJson<Order>(`/api/store/orders/${orderId}/cancel`, "POST", token);

@@ -40,8 +40,8 @@ function guard(
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 고객 보호 경로 (/cart)
-  if (pathname.startsWith("/cart")) {
+  // 고객 보호 경로 (/cart, /orders)
+  if (pathname.startsWith("/cart") || pathname.startsWith("/orders")) {
     return guard(request, CUSTOMER_ACCESS_COOKIE, CUSTOMER_REFRESH_COOKIE, "/refresh", "/login");
   }
 
@@ -53,5 +53,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/cart/:path*"],
+  matcher: ["/admin/:path*", "/cart/:path*", "/orders/:path*"],
 };

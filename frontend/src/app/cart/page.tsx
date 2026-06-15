@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { ApiError, getCart } from "@/lib/api";
 import type { Cart } from "@/lib/api";
 import { CUSTOMER_ACCESS_COOKIE } from "@/lib/auth-cookies";
-import { removeItemAction, updateQuantityAction } from "./actions";
+import { createOrderAction, removeItemAction, updateQuantityAction } from "./actions";
 
 // 장바구니 — proxy가 보호하지만 쿠키 부재 시 이중 방어로 로그인으로 보낸다
 export default async function CartPage({
@@ -83,6 +83,11 @@ export default async function CartPage({
           <p style={{ fontSize: 18 }}>
             <strong>합계: {cart.totalPrice.toLocaleString()}원</strong>
           </p>
+          <form action={createOrderAction}>
+            <button type="submit" style={{ padding: "8px 24px", cursor: "pointer" }}>
+              주문하기
+            </button>
+          </form>
         </>
       )}
     </main>
