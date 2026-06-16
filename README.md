@@ -16,7 +16,9 @@
 > **어드민 인증:** 어드민 화면/API는 JWT 로그인이 필요하다(role: ADMIN). 기본 계정은 `admin` / `admin1234`
 > (환경변수 `ADMIN_USERNAME` / `ADMIN_PASSWORD`로 변경 가능). 로그인: http://localhost:3000/admin/login
 
-> **고객 인증:** 스토어 고객은 회원가입(/register) · 로그인(/login)이 가능하다. 가입 즉시 자동 로그인. 어드민과 JWT role(ADMIN/CUSTOMER)로 권한 분리 — 고객 토큰으로 어드민 API 접근 시 403 반환. 상품 목록·상세 등 조회 API는 인증 없이 접근 가능하다. 고객 보호 페이지(`/cart`)는 proxy가 보호하고 access 만료 시 `/refresh`로 자동 갱신(어드민과 동일 메커니즘).
+> **고객 인증:** 스토어 고객은 회원가입(/register) · 로그인(/login)이 가능하다. 가입 즉시 자동 로그인. 어드민과 JWT role(ADMIN/CUSTOMER)로 권한 분리 — 고객 토큰으로 어드민 API 접근 시 403 반환. 상품 목록·상세 등 조회 API는 인증 없이 접근 가능하다. 고객 보호 페이지(`/cart`, `/orders`)는 proxy가 보호하고 access 만료 시 `/refresh`로 자동 갱신(어드민과 동일 메커니즘).
+
+> **주문(고객 전용):** 장바구니 전체를 한 번에 주문으로 전환한다. 판매 중지·재고 부족 등 구매 불가 항목은 주문에서 제외하고 사유와 함께 안내하며 장바구니에 남긴다(부분 주문). 주문 시 재고를 차감하고 상품명·단가를 주문 시점으로 고정(스냅샷)해 이후 가격 변경에 영향받지 않는다. 주문 취소 시 재고를 복원한다(상태 전이 ORDERED→CANCELLED, 이력 보존).
 
 > **기존 로컬 DB 볼륨이 있는 경우:** 공급사명 유니크 제약이 추가되어 기존 볼륨에는 자동
 > 적용되지 않을 수 있다. `docker compose down -v && docker compose up -d`로 볼륨을
@@ -68,6 +70,9 @@ createdAt (LocalDateTime)     price (BigDecimal)
 | 고객 | `POST /api/store/cart/items` | 장바구니 담기 — 같은 상품 재담기 시 수량 가산, 재고 상한 검증 (고객 전용) |
 | 고객 | `PATCH /api/store/cart/items/{productId}` | 장바구니 수량 변경 (고객 전용) |
 | 고객 | `DELETE /api/store/cart/items/{productId}` | 장바구니 상품 삭제 — 멱등 204 (고객 전용) |
+| 고객 | `POST /api/store/orders` | 주문 생성 — 장바구니 전체를 주문으로 전환(부분 주문: 구매 불가 항목 제외·사유 반환), 재고 차감·가격 스냅샷 (고객 전용) |
+| 고객 | `GET /api/store/orders` | 내 주문 목록 — 최신순, 항목·합계 포함 (고객 전용) |
+| 고객 | `POST /api/store/orders/{orderId}/cancel` | 주문 취소 — 상태 전이(ORDERED→CANCELLED)·재고 복원 (고객 전용) |
 | 어드민 | `POST /api/admin/login` | 어드민 로그인 (JWT 발급) — 인증 불필요 |
 | 어드민 | `GET /api/admin/suppliers` | 공급사 목록 |
 | 어드민 | `POST /api/admin/suppliers` | 공급사 생성 |
