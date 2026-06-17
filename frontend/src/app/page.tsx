@@ -25,12 +25,17 @@ export default async function HomePage() {
         <h1>스토어</h1>
         <nav style={{ display: "flex", gap: 12 }}>
           {isLoggedIn ? (
-            // GET <Link>는 프리페치로 의도치 않게 로그아웃될 수 있어 POST 폼으로 호출(어드민 패턴과 동일)
-            <form action="/logout" method="post" style={{ margin: 0 }}>
-              <button type="submit" style={{ padding: "4px 12px", cursor: "pointer" }}>
-                로그아웃
-              </button>
-            </form>
+            <>
+              {/* 프리페치 차단 — access 만료 시 백그라운드 GET /cart→/refresh가 refresh 토큰을 회전시켜 실제 내비게이션과 경합(재사용 탐지로 강제 로그아웃)할 수 있다 */}
+              <Link href="/cart" prefetch={false}>장바구니</Link>
+              <Link href="/orders" prefetch={false}>주문 내역</Link>
+              {/* GET <Link>는 프리페치로 의도치 않게 로그아웃될 수 있어 POST 폼으로 호출(어드민 패턴과 동일) */}
+              <form action="/logout" method="post" style={{ margin: 0 }}>
+                <button type="submit" style={{ padding: "4px 12px", cursor: "pointer" }}>
+                  로그아웃
+                </button>
+              </form>
+            </>
           ) : (
             <>
               <Link href="/login">로그인</Link>
