@@ -23,6 +23,7 @@ public class RefreshTokenService {
     private static final String INVALID_REFRESH = "리프레시 토큰이 유효하지 않습니다.";
 
     private final RefreshTokenRepository repository;
+    private final TokenTheftResponder theftResponder;
     private final long refreshSeconds;
     private final Supplier<Instant> clock;
     private final SecureRandom random = new SecureRandom();
@@ -30,13 +31,16 @@ public class RefreshTokenService {
     // Spring DI용 — 생성자가 2개이므로 @Autowired로 명시
     @Autowired
     public RefreshTokenService(RefreshTokenRepository repository,
+                               TokenTheftResponder theftResponder,
                                @Value("${refresh.expiration-seconds:604800}") long refreshSeconds) {
-        this(repository, refreshSeconds, Instant::now);
+        this(repository, theftResponder, refreshSeconds, Instant::now);
     }
 
     // 테스트용 — 시각 공급자 주입
-    RefreshTokenService(RefreshTokenRepository repository, long refreshSeconds, Supplier<Instant> clock) {
+    RefreshTokenService(RefreshTokenRepository repository, TokenTheftResponder theftResponder,
+                        long refreshSeconds, Supplier<Instant> clock) {
         this.repository = repository;
+        this.theftResponder = theftResponder;
         this.refreshSeconds = refreshSeconds;
         this.clock = clock;
     }
@@ -60,8 +64,9 @@ public class RefreshTokenService {
                 .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH));
 
         if (stored.isRevoked()) {
-            // 이미 폐기된 토큰 재제출 = 탈취 정황 → 해당 owner의 살아있는 토큰을 전부 폐기
-            repository.revokeAllByOwner(stored.getOwnerType(), stored.getOwnerId());
+            // 이미 폐기된 토큰 재제출 = 탈취 정황 → 형제 토큰 일괄 폐기.
+            // 별도 트랜잭션(REQUIRES_NEW)으로 즉시 커밋 — 아래 예외로 이 트랜잭션이 롤백돼도 폐기는 남는다.
+            theftResponder.revokeAllFor(stored.getOwnerType(), stored.getOwnerId());
             throw new UnauthorizedException(INVALID_REFRESH);
         }
         if (!now.isBefore(stored.getExpiresAt())) {

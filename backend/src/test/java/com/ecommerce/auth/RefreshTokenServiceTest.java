@@ -16,6 +16,9 @@ import java.util.function.Supplier;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+// 회전·만료·폐기 "로직" 검증 전용 — @DataJpaTest는 각 테스트를 바깥 트랜잭션으로 감싸
+// 커밋 경계가 프로덕션과 다르다(내부 예외 후에도 변경이 보임).
+// 재사용 탐지 폐기가 실제로 "커밋"되는지는 RefreshTokenReuseDetectionTest(@SpringBootTest)가 검증한다.
 @DataJpaTest
 @ActiveProfiles("test")
 class RefreshTokenServiceTest {
@@ -27,7 +30,9 @@ class RefreshTokenServiceTest {
     @Autowired RefreshTokenRepository refreshTokenRepository;
 
     private RefreshTokenService service(Supplier<Instant> clock) {
-        return new RefreshTokenService(refreshTokenRepository, SEVEN_DAYS, clock);
+        // 프록시 없는 직접 생성 — REQUIRES_NEW가 적용되지 않고 테스트 트랜잭션에 참여한다(로직 검증엔 충분)
+        return new RefreshTokenService(refreshTokenRepository,
+                new TokenTheftResponder(refreshTokenRepository), SEVEN_DAYS, clock);
     }
 
     @Test
