@@ -71,11 +71,28 @@ public class Order {
         totalPrice = totalPrice.add(price.multiply(BigDecimal.valueOf(quantity)));
     }
 
+    // 취소 — ORDERED일 때만 (배송 시작 후/이미 취소면 거부). 재고 복원은 호출부(OrderService) 책임.
     public void cancel() {
-        if (status == OrderStatus.CANCELLED) {
-            throw new BadRequestException("이미 취소된 주문입니다.");
+        if (status != OrderStatus.ORDERED) {
+            throw new BadRequestException("배송이 시작되었거나 이미 취소된 주문은 취소할 수 없습니다.");
         }
         this.status = OrderStatus.CANCELLED;
+    }
+
+    // 배송 시작 — ORDERED → SHIPPING (어드민)
+    public void ship() {
+        if (status != OrderStatus.ORDERED) {
+            throw new BadRequestException("주문 완료 상태에서만 배송을 시작할 수 있습니다.");
+        }
+        this.status = OrderStatus.SHIPPING;
+    }
+
+    // 배송 완료 — SHIPPING → DELIVERED (어드민)
+    public void deliver() {
+        if (status != OrderStatus.SHIPPING) {
+            throw new BadRequestException("배송 중 상태에서만 배송 완료할 수 있습니다.");
+        }
+        this.status = OrderStatus.DELIVERED;
     }
 
     public Long getId() { return id; }
