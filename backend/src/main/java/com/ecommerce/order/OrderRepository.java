@@ -23,4 +23,18 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("select o from Order o where o.id = :id and o.customerId = :customerId")
     Optional<Order> findByIdAndCustomerIdForUpdate(@Param("id") Long id,
                                                    @Param("customerId") Long customerId);
+
+    // 어드민 전이용 — Order 행을 PESSIMISTIC_WRITE로 잠가 상태 전이를 직렬화(동시 전이 경합 방지).
+    // 고객 취소와 동일 패턴: @Query + @Lock에서 @EntityGraph는 무시될 수 있어 items는 같은 트랜잭션 내 lazy 초기화.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select o from Order o where o.id = :id")
+    Optional<Order> findByIdForUpdate(@Param("id") Long id);
+
+    // 어드민 목록 — 항목을 함께 로딩(N+1 방지), 최신 주문 먼저
+    @EntityGraph(attributePaths = "items")
+    List<Order> findAllByOrderByIdDesc();
+
+    // 어드민 목록(상태 필터)
+    @EntityGraph(attributePaths = "items")
+    List<Order> findAllByStatusOrderByIdDesc(OrderStatus status);
 }
