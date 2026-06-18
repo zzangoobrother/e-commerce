@@ -1,9 +1,12 @@
 package com.ecommerce.order;
 
+import com.ecommerce.auth.Customer;
+import com.ecommerce.auth.CustomerRepository;
 import com.ecommerce.cart.CartItem;
 import com.ecommerce.cart.CartItemRepository;
 import com.ecommerce.common.BadRequestException;
 import com.ecommerce.common.NotFoundException;
+import com.ecommerce.order.dto.AdminOrderResponse;
 import com.ecommerce.order.dto.CreateOrderResponse;
 import com.ecommerce.order.dto.CreateOrderResponse.ExcludedItemResponse;
 import com.ecommerce.order.dto.OrderResponse;
@@ -28,13 +31,16 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
+    private final CustomerRepository customerRepository;
 
     public OrderService(OrderRepository orderRepository,
                         CartItemRepository cartItemRepository,
-                        ProductRepository productRepository) {
+                        ProductRepository productRepository,
+                        CustomerRepository customerRepository) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.productRepository = productRepository;
+        this.customerRepository = customerRepository;
     }
 
     public List<OrderResponse> getOrders(Long customerId) {
@@ -103,7 +109,60 @@ public class OrderService {
         Order order = orderRepository.findByIdAndCustomerIdForUpdate(orderId, customerId)
                 .orElseThrow(() -> new NotFoundException("주문을 찾을 수 없습니다: " + orderId));
         order.cancel(); // 이미 취소된 주문이면 400
+        restoreStock(order);
+        return OrderResponse.from(order);
+    }
 
+    // === 어드민 ===
+
+    // 전체 주문 목록(상태 필터 옵션) — 고객 이메일은 배치 조회로 enrich(N+1 회피)
+    public List<AdminOrderResponse> getAllOrders(OrderStatus statusFilter) {
+        List<Order> orders = (statusFilter == null)
+                ? orderRepository.findAllByOrderByIdDesc()
+                : orderRepository.findAllByStatusOrderByIdDesc(statusFilter);
+        List<Long> customerIds = orders.stream().map(Order::getCustomerId).distinct().toList();
+        Map<Long, String> emailById = customerRepository.findAllById(customerIds).stream()
+                .collect(Collectors.toMap(Customer::getId, Customer::getEmail));
+        return orders.stream()
+                .map(o -> AdminOrderResponse.from(o, emailById.getOrDefault(o.getCustomerId(), "(삭제된 고객)")))
+                .toList();
+    }
+
+    @Transactional
+    public AdminOrderResponse shipOrder(Long orderId) {
+        Order order = lockOrder(orderId);
+        order.ship();
+        return adminResponse(order);
+    }
+
+    @Transactional
+    public AdminOrderResponse deliverOrder(Long orderId) {
+        Order order = lockOrder(orderId);
+        order.deliver();
+        return adminResponse(order);
+    }
+
+    @Transactional
+    public AdminOrderResponse cancelOrderByAdmin(Long orderId) {
+        Order order = lockOrder(orderId);
+        order.cancel();
+        restoreStock(order);
+        return adminResponse(order);
+    }
+
+    private Order lockOrder(Long orderId) {
+        return orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new NotFoundException("주문을 찾을 수 없습니다: " + orderId));
+    }
+
+    private AdminOrderResponse adminResponse(Order order) {
+        String email = customerRepository.findById(order.getCustomerId())
+                .map(Customer::getEmail).orElse("(삭제된 고객)");
+        return AdminOrderResponse.from(order, email);
+    }
+
+    // 취소 시 재고 복원 — 잠금은 productId 오름차순(데드락 예방). 삭제된 상품은 잠금 조회에 빠져 자연 스킵.
+    private void restoreStock(Order order) {
         List<Long> productIds = order.getItems().stream()
                 .map(OrderItem::getProductId).sorted().toList();
         Map<Long, Integer> quantityByProductId = order.getItems().stream()
@@ -111,7 +170,6 @@ public class OrderService {
         for (Product product : productRepository.findAllForUpdate(productIds)) {
             product.increaseStock(quantityByProductId.get(product.getId()));
         }
-        return OrderResponse.from(order);
     }
 
     private String summarize(List<ExcludedItemResponse> excluded) {

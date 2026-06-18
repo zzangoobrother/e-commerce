@@ -297,4 +297,25 @@ class OrderControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
+
+    @Test
+    void 배송이_시작된_주문은_고객이_취소할_수_없다_400() throws Exception {
+        Customer customer = customer("user@example.com");
+        Product apple = product("사과", "3000", 10, ProductStatus.ON_SALE);
+        putInCart(customer, apple, 2);
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+                .andExpect(status().isCreated());
+
+        // 어드민이 배송을 시작했다고 가정 — 엔티티 전이를 직접 적용 후 저장
+        Order order = orderRepository.findAll().get(0);
+        order.ship();
+        orderRepository.save(order);
+
+        mockMvc.perform(post("/api/store/orders/" + order.getId() + "/cancel")
+                        .with(customerJwt("user@example.com")))
+                .andExpect(status().isBadRequest());
+
+        // 배송 시작 후 취소 불가 — 재고는 차감된 8 그대로
+        assertThat(stockOf(apple)).isEqualTo(8);
+    }
 }
