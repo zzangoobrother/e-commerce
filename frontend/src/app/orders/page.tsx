@@ -9,6 +9,8 @@ import { cancelOrderAction } from "./actions";
 // 상태 표시용 한국어 라벨
 const STATUS_LABEL: Record<Order["status"], string> = {
   ORDERED: "주문 완료",
+  SHIPPING: "배송중",
+  DELIVERED: "배송완료",
   CANCELLED: "취소됨",
 };
 
