@@ -1,5 +1,6 @@
 package com.ecommerce.common;
 
+import com.ecommerce.payment.PaymentDeclinedException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<Map<String, String>> handleBadRequest(BadRequestException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
+    }
+
+    @ExceptionHandler(PaymentDeclinedException.class)
+    public ResponseEntity<Map<String, String>> handlePaymentDeclined(PaymentDeclinedException e) {
+        return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
                 .body(Map.of("message", e.getMessage()));
     }
 
