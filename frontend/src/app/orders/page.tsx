@@ -14,6 +14,11 @@ const STATUS_LABEL: Record<Order["status"], string> = {
   CANCELLED: "취소됨",
 };
 
+const PAYMENT_STATUS_LABEL: Record<"PAID" | "REFUNDED", string> = {
+  PAID: "결제완료",
+  REFUNDED: "환불됨",
+};
+
 // 주문 목록 — proxy가 보호하지만 쿠키 부재 시 이중 방어로 로그인으로 보낸다
 export default async function OrdersPage({
   searchParams,
@@ -73,6 +78,12 @@ export default async function OrdersPage({
                   </li>
                 ))}
               </ul>
+              {order.payment && (
+                <p style={{ margin: "8px 0 0", color: "#555" }}>
+                  결제: {order.payment.cardBrand} ****{order.payment.cardLast4} ·{" "}
+                  {PAYMENT_STATUS_LABEL[order.payment.status]}
+                </p>
+              )}
               <div style={{ display: "flex", justifyContent: "space-between",
                             alignItems: "center", marginTop: 8 }}>
                 <strong>합계: {order.totalPrice.toLocaleString()}원</strong>

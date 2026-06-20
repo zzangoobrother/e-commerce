@@ -56,8 +56,16 @@ export async function removeItemAction(formData: FormData) {
   redirect("/cart");
 }
 
-// 주문하기 — 장바구니 전체 주문(구매 가능한 것만). 제외 항목은 /orders?notice=로 안내
-export async function createOrderAction() {
+// 주문하기 — 장바구니 전체 주문(구매 가능한 것만) + 카드 결제. 제외 항목은 /orders?notice=로 안내
+export async function createOrderAction(formData: FormData) {
+  const card = {
+    cardNumber: String(formData.get("cardNumber") ?? ""),
+    expiryMonth: Number(formData.get("expiryMonth")),
+    expiryYear: Number(formData.get("expiryYear")),
+    cvc: String(formData.get("cvc") ?? ""),
+    cardholderName: String(formData.get("cardholderName") ?? ""),
+  };
+
   // access 만료(쿠키 자동 소멸) 시 갱신 후 /cart 복귀 — refresh도 없으면 /refresh 라우트가 로그인으로 보낸다
   const token = (await cookies()).get(CUSTOMER_ACCESS_COOKIE)?.value;
   if (!token) {
@@ -68,7 +76,7 @@ export async function createOrderAction() {
   let errorMessage: string | null = null;
   let noticeMessage: string | null = null;
   try {
-    const result = await createOrder(token);
+    const result = await createOrder(token, card);
     if (result.excludedItems.length > 0) {
       noticeMessage =
         result.excludedItems.map((e) => `${e.productName}: ${e.reason}`).join(" / ") +
@@ -78,6 +86,7 @@ export async function createOrderAction() {
     if (err instanceof ApiError && err.status === 401) {
       unauthorized = true;
     } else {
+      // 402(카드 거절)·400(형식오류)은 서버 메시지를 그대로 노출
       errorMessage = err instanceof Error ? err.message : "주문에 실패했습니다.";
     }
   }

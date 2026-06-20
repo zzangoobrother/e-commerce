@@ -2,6 +2,9 @@ package com.ecommerce.order;
 
 import com.ecommerce.auth.Customer;
 import com.ecommerce.auth.CustomerRepository;
+import com.ecommerce.payment.Payment;
+import com.ecommerce.payment.PaymentGateway;
+import com.ecommerce.payment.PaymentRepository;
 import com.ecommerce.product.Product;
 import com.ecommerce.product.ProductRepository;
 import com.ecommerce.product.ProductStatus;
@@ -31,6 +34,7 @@ class AdminOrderControllerTest {
 
     @Autowired MockMvc mockMvc;
     @Autowired OrderRepository orderRepository;
+    @Autowired PaymentRepository paymentRepository;
     @Autowired CustomerRepository customerRepository;
     @Autowired ProductRepository productRepository;
     @Autowired SupplierRepository supplierRepository;
@@ -39,6 +43,7 @@ class AdminOrderControllerTest {
 
     @AfterEach
     void cleanup() {
+        paymentRepository.deleteAll();
         orderRepository.deleteAll();
         productRepository.deleteAll();
         supplierRepository.deleteAll();
@@ -66,13 +71,16 @@ class AdminOrderControllerTest {
                 new BigDecimal(price), stock, ProductStatus.ON_SALE));
     }
 
-    // ORDERED 주문 생성 — createOrder와 동일하게 재고 차감 + 스냅샷
+    // ORDERED 주문 생성 — createOrder와 동일하게 재고 차감 + 스냅샷 + 결제(취소 시 환불 대상)
     private Order placeOrder(Customer customer, Product product, int qty) {
         product.decreaseStock(qty);
         productRepository.save(product);
         Order order = new Order(customer.getId());
         order.addItem(product.getId(), product.getName(), product.getPrice(), qty);
-        return orderRepository.save(order);
+        orderRepository.save(order);
+        paymentRepository.save(Payment.of(order.getId(), order.getTotalPrice(),
+                new PaymentGateway.Approval("VISA", "4242", "MOCK-TEST")));
+        return order;
     }
 
     private int stockOf(Product product) {

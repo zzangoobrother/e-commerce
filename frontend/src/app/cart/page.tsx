@@ -83,9 +83,25 @@ export default async function CartPage({
           <p style={{ fontSize: 18 }}>
             <strong>합계: {cart.totalPrice.toLocaleString()}원</strong>
           </p>
-          <form action={createOrderAction}>
+          <form action={createOrderAction} style={{ marginTop: 16, display: "grid", gap: 8, maxWidth: 320 }}>
+            <strong>카드 결제</strong>
+            <input name="cardNumber" placeholder="카드번호 (4242 4242 4242 4242)"
+                   defaultValue="4242424242424242" required
+                   style={{ border: "1px solid #ddd", padding: 6, borderRadius: 4 }} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <input name="expiryMonth" type="number" min={1} max={12} placeholder="MM"
+                     defaultValue={12} required
+                     style={{ width: 64, border: "1px solid #ddd", padding: 6, borderRadius: 4 }} />
+              <input name="expiryYear" type="number" placeholder="YYYY"
+                     defaultValue={2999} required
+                     style={{ width: 96, border: "1px solid #ddd", padding: 6, borderRadius: 4 }} />
+              <input name="cvc" placeholder="CVC" defaultValue="123" required
+                     style={{ width: 64, border: "1px solid #ddd", padding: 6, borderRadius: 4 }} />
+            </div>
+            <input name="cardholderName" placeholder="카드 소유자명" defaultValue="HONG GILDONG" required
+                   style={{ border: "1px solid #ddd", padding: 6, borderRadius: 4 }} />
             <button type="submit" style={{ padding: "8px 24px", cursor: "pointer" }}>
-              주문하기
+              결제하고 주문하기
             </button>
           </form>
         </>

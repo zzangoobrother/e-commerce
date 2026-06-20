@@ -4,6 +4,7 @@ import com.ecommerce.auth.Customer;
 import com.ecommerce.auth.CustomerRepository;
 import com.ecommerce.cart.CartItem;
 import com.ecommerce.cart.CartItemRepository;
+import com.ecommerce.payment.PaymentRepository;
 import com.ecommerce.product.Product;
 import com.ecommerce.product.ProductRepository;
 import com.ecommerce.product.ProductStatus;
@@ -18,6 +19,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+
+import org.springframework.http.MediaType;
 
 import java.math.BigDecimal;
 
@@ -37,13 +40,18 @@ class OrderControllerTest {
     @Autowired CustomerRepository customerRepository;
     @Autowired ProductRepository productRepository;
     @Autowired SupplierRepository supplierRepository;
+    @Autowired PaymentRepository paymentRepository;
 
     // 테스트 내 supplier 고유명 생성용 카운터 — JUnit5 인스턴스당 0에서 시작
     private int supplierSeq = 0;
 
+    private static final String APPROVED_CARD_JSON =
+            "{\"cardNumber\":\"4242424242424242\",\"expiryMonth\":12,\"expiryYear\":2999,\"cvc\":\"123\",\"cardholderName\":\"HONG\"}";
+
     @AfterEach
     void cleanup() {
         // FK 역순: order_items는 orders cascade로, cart_items는 products보다 먼저
+        paymentRepository.deleteAll();
         orderRepository.deleteAll();
         cartItemRepository.deleteAll();
         productRepository.deleteAll();
@@ -83,7 +91,8 @@ class OrderControllerTest {
         Product apple = product("사과", "3000", 10, ProductStatus.ON_SALE);
         putInCart(customer, apple, 2);
 
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.order.status").value("ORDERED"))
                 .andExpect(jsonPath("$.order.items.length()").value(1))
@@ -104,7 +113,8 @@ class OrderControllerTest {
         Product apple = product("사과", "3000", 10, ProductStatus.ON_SALE);
         putInCart(customer, apple, 2);
 
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isCreated());
 
         // 주문 후 가격 인상 — 주문 금액은 스냅샷이라 그대로여야 한다
@@ -127,7 +137,8 @@ class OrderControllerTest {
         putInCart(customer, apple, 2);
         putInCart(customer, hidden, 1);
 
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.order.items.length()").value(1))
                 .andExpect(jsonPath("$.order.items[0].productName").value("사과"))
@@ -151,7 +162,8 @@ class OrderControllerTest {
         putInCart(customer, apple, 2);
         putInCart(customer, pear, 5); // 5 > 재고 1
 
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.order.items.length()").value(1))
                 .andExpect(jsonPath("$.excludedItems[0].productName").value("배"));
@@ -165,7 +177,8 @@ class OrderControllerTest {
         Product hidden = product("숨김상품", "5000", 10, ProductStatus.HIDDEN);
         putInCart(customer, hidden, 1);
 
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").exists());
 
@@ -178,7 +191,8 @@ class OrderControllerTest {
     void 빈_장바구니로_주문하면_400을_반환한다() throws Exception {
         customer("user@example.com");
 
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isBadRequest());
     }
 
@@ -187,7 +201,8 @@ class OrderControllerTest {
         Customer customer = customer("user@example.com");
         Product apple = product("사과", "3000", 10, ProductStatus.ON_SALE);
         putInCart(customer, apple, 2);
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isCreated());
         Long orderId = orderRepository.findAll().get(0).getId();
 
@@ -204,7 +219,8 @@ class OrderControllerTest {
         Customer customer = customer("user@example.com");
         Product apple = product("사과", "3000", 10, ProductStatus.ON_SALE);
         putInCart(customer, apple, 2);
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isCreated());
         Long orderId = orderRepository.findAll().get(0).getId();
 
@@ -226,7 +242,8 @@ class OrderControllerTest {
         customer("b@example.com");
         Product apple = product("사과", "3000", 10, ProductStatus.ON_SALE);
         putInCart(owner, apple, 2);
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("a@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("a@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isCreated());
         Long orderId = orderRepository.findAll().get(0).getId();
 
@@ -240,7 +257,8 @@ class OrderControllerTest {
         Customer customer = customer("user@example.com");
         Product apple = product("사과", "3000", 10, ProductStatus.ON_SALE);
         putInCart(customer, apple, 2);
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isCreated());
         Long orderId = orderRepository.findAll().get(0).getId();
 
@@ -258,10 +276,12 @@ class OrderControllerTest {
         Customer customer = customer("user@example.com");
         Product apple = product("사과", "3000", 10, ProductStatus.ON_SALE);
         putInCart(customer, apple, 1);
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isCreated());
         putInCart(customer, apple, 2);
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(get("/api/store/orders").with(customerJwt("user@example.com")))
@@ -290,7 +310,8 @@ class OrderControllerTest {
         customer("b@example.com");
         Product apple = product("사과", "3000", 10, ProductStatus.ON_SALE);
         putInCart(a, apple, 2);
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("a@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("a@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(get("/api/store/orders").with(customerJwt("b@example.com")))
@@ -303,7 +324,8 @@ class OrderControllerTest {
         Customer customer = customer("user@example.com");
         Product apple = product("사과", "3000", 10, ProductStatus.ON_SALE);
         putInCart(customer, apple, 2);
-        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com")))
+        mockMvc.perform(post("/api/store/orders").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(APPROVED_CARD_JSON))
                 .andExpect(status().isCreated());
 
         // 어드민이 배송을 시작했다고 가정 — 엔티티 전이를 직접 적용 후 저장

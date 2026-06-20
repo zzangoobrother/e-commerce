@@ -101,6 +101,12 @@ export default async function AdminOrdersPage({
                   </li>
                 ))}
               </ul>
+              {order.payment && (
+                <p style={{ margin: "8px 0 0", color: "#555" }}>
+                  결제: {order.payment.cardBrand} ****{order.payment.cardLast4} ·{" "}
+                  {order.payment.status === "REFUNDED" ? "환불됨" : "결제완료"}
+                </p>
+              )}
               <div style={{ display: "flex", justifyContent: "space-between",
                             alignItems: "center", marginTop: 8 }}>
                 <strong>합계: {order.totalPrice.toLocaleString()}원</strong>
