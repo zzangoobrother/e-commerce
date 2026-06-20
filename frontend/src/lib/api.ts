@@ -47,6 +47,24 @@ export interface Cart {
 
 export type OrderStatus = "ORDERED" | "SHIPPING" | "DELIVERED" | "CANCELLED";
 
+export type PaymentStatus = "PAID" | "REFUNDED";
+
+export interface PaymentSummary {
+  amount: number;
+  status: PaymentStatus;
+  cardBrand: string;
+  cardLast4: string;
+  approvalNo: string;
+}
+
+export interface CardPaymentRequest {
+  cardNumber: string;
+  expiryMonth: number;
+  expiryYear: number;
+  cvc: string;
+  cardholderName: string;
+}
+
 export interface OrderItem {
   productId: number;
   productName: string;
@@ -61,6 +79,7 @@ export interface Order {
   totalPrice: number;
   createdAt: string;
   items: OrderItem[];
+  payment: PaymentSummary | null;
 }
 
 export interface ExcludedItem {
@@ -81,6 +100,7 @@ export interface AdminOrder {
   totalPrice: number;
   createdAt: string;
   items: OrderItem[];
+  payment: PaymentSummary | null;
 }
 
 // HTTP 상태 코드를 보존하는 API 에러 (401 구분용)
@@ -255,8 +275,8 @@ export const removeCartItem = (token: string, productId: number) =>
   sendJson<void>(`/api/store/cart/items/${productId}`, "DELETE", token);
 
 // 주문 (고객 Bearer 토큰 필요)
-export const createOrder = (token: string) =>
-  sendJson<CreateOrderResult>("/api/store/orders", "POST", token);
+export const createOrder = (token: string, card: CardPaymentRequest) =>
+  sendJson<CreateOrderResult>("/api/store/orders", "POST", token, card);
 export const getOrders = (token: string) => getJson<Order[]>("/api/store/orders", token);
 export const cancelOrder = (token: string, orderId: number) =>
   sendJson<Order>(`/api/store/orders/${orderId}/cancel`, "POST", token);
