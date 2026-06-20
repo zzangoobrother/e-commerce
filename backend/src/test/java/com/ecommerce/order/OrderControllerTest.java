@@ -4,6 +4,7 @@ import com.ecommerce.auth.Customer;
 import com.ecommerce.auth.CustomerRepository;
 import com.ecommerce.cart.CartItem;
 import com.ecommerce.cart.CartItemRepository;
+import com.ecommerce.payment.PaymentRepository;
 import com.ecommerce.product.Product;
 import com.ecommerce.product.ProductRepository;
 import com.ecommerce.product.ProductStatus;
@@ -39,6 +40,7 @@ class OrderControllerTest {
     @Autowired CustomerRepository customerRepository;
     @Autowired ProductRepository productRepository;
     @Autowired SupplierRepository supplierRepository;
+    @Autowired PaymentRepository paymentRepository;
 
     // 테스트 내 supplier 고유명 생성용 카운터 — JUnit5 인스턴스당 0에서 시작
     private int supplierSeq = 0;
@@ -49,6 +51,7 @@ class OrderControllerTest {
     @AfterEach
     void cleanup() {
         // FK 역순: order_items는 orders cascade로, cart_items는 products보다 먼저
+        paymentRepository.deleteAll();
         orderRepository.deleteAll();
         cartItemRepository.deleteAll();
         productRepository.deleteAll();
