@@ -223,6 +223,45 @@ class CustomerAuthControllerTest {
                 .andExpect(status().isNoContent());
     }
 
+    @Test
+    void 어드민_refresh_토큰을_고객_로그아웃에_쓰면_204지만_어드민_토큰은_폐기되지_않는다() throws Exception {
+        adminRepository.save(new Admin("admin", passwordEncoder.encode("admin1234")));
+        String adminLoginBody = objectMapper.writeValueAsString(
+                Map.of("username", "admin", "password", "admin1234"));
+        String adminResp = mockMvc.perform(post("/api/admin/login")
+                        .contentType(MediaType.APPLICATION_JSON).content(adminLoginBody))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String adminRefresh = objectMapper.readTree(adminResp).get("refreshToken").asString();
+        String body = objectMapper.writeValueAsString(Map.of("refreshToken", adminRefresh));
+
+        // 고객 로그아웃 경로에 어드민 토큰 → 204(멱등)
+        mockMvc.perform(post("/api/store/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNoContent());
+
+        // 어드민 토큰은 폐기되지 않아 어드민 리프레시가 정상 동작
+        mockMvc.perform(post("/api/admin/refresh")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void 고객_refresh_토큰을_어드민_로그아웃에_쓰면_204지만_고객_토큰은_폐기되지_않는다() throws Exception {
+        String customerRefresh = registerAndGetRefreshToken("user@example.com", "pw12345678");
+        String body = objectMapper.writeValueAsString(Map.of("refreshToken", customerRefresh));
+
+        // 어드민 로그아웃 경로에 고객 토큰 → 204(멱등)
+        mockMvc.perform(post("/api/admin/logout")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNoContent());
+
+        // 고객 토큰은 폐기되지 않아 고객 리프레시가 정상 동작
+        mockMvc.perform(post("/api/store/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk());
+    }
+
     private JsonNode register(String email, String password) throws Exception {
         String body = objectMapper.writeValueAsString(Map.of("email", email, "password", password));
         String response = mockMvc.perform(post("/api/store/auth/register")

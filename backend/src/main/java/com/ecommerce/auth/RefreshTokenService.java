@@ -80,10 +80,13 @@ public class RefreshTokenService {
         return new RotationResult(owner, refresh);
     }
 
-    // 로그아웃 — 제출된 토큰을 폐기(미존재/중복이어도 멱등)
+    // 로그아웃 — 제출된 토큰을 폐기(미존재/타입 불일치/중복이어도 멱등).
+    // expected와 소유자 타입이 일치할 때만 폐기해 교차 타입 폐기를 막는다(refresh 가드와 대칭).
     @Transactional
-    public void revoke(String presentedToken) {
-        repository.findByTokenHash(hash(presentedToken)).ifPresent(RefreshToken::revoke);
+    public void revoke(String presentedToken, OwnerType expected) {
+        repository.findByTokenHash(hash(presentedToken))
+                .filter(token -> token.getOwnerType() == expected)
+                .ifPresent(RefreshToken::revoke);
     }
 
     private String generateToken() {

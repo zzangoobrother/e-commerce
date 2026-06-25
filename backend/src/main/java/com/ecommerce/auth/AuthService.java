@@ -81,10 +81,10 @@ public class AuthService {
                 result.refresh().token(), result.refresh().expiresAt());
     }
 
-    // 로그아웃: refresh 폐기
+    // 로그아웃: refresh 폐기 — 어드민 타입 가드 적용(타입 불일치 시 no-op, 멱등)
     @Transactional
     public void logout(String refreshToken) {
-        refreshTokenService.revoke(refreshToken);
+        refreshTokenService.revoke(refreshToken, OwnerType.ADMIN);
     }
 
     private TokenResponse issueTokens(Admin admin) {

@@ -118,7 +118,7 @@ class RefreshTokenServiceTest {
         RefreshTokenService service = service(Instant::now);
         IssuedToken token = service.issue(ADMIN_1);
 
-        service.revoke(token.token());
+        service.revoke(token.token(), OwnerType.ADMIN);
 
         assertThatThrownBy(() -> service.rotate(token.token()))
                 .isInstanceOf(UnauthorizedException.class);
@@ -127,6 +127,19 @@ class RefreshTokenServiceTest {
     @Test
     void revoke는_존재하지_않는_토큰에도_조용히_통과한다() {
         RefreshTokenService service = service(Instant::now);
-        service.revoke("nonexistent");
+        service.revoke("nonexistent", OwnerType.ADMIN);
+    }
+
+    @Test
+    void revoke는_타입이_불일치하면_폐기하지_않는다() {
+        RefreshTokenService service = service(Instant::now);
+        IssuedToken token = service.issue(ADMIN_1);
+
+        // 어드민 토큰을 고객 타입으로 폐기 시도 → no-op
+        service.revoke(token.token(), OwnerType.CUSTOMER);
+
+        // 여전히 유효 → 회전 성공
+        RotationResult result = service.rotate(token.token());
+        assertThat(result.owner()).isEqualTo(ADMIN_1);
     }
 }
