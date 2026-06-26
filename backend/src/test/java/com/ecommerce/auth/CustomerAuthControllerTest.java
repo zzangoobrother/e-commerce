@@ -136,6 +136,25 @@ class CustomerAuthControllerTest {
     }
 
     @Test
+    void 동일_IP에서_가입을_5회_초과하면_429를_반환한다() throws Exception {
+        // 성공 가입도 계수된다 — 서로 다른 이메일로 5회 모두 성공한 뒤 6회째는 429
+        for (int i = 0; i < 5; i++) {
+            String body = objectMapper.writeValueAsString(
+                    Map.of("email", "user" + i + "@example.com", "password", "pw12345678"));
+            mockMvc.perform(post("/api/store/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isCreated());
+        }
+
+        String body = objectMapper.writeValueAsString(
+                Map.of("email", "user5@example.com", "password", "pw12345678"));
+        mockMvc.perform(post("/api/store/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
     void 리프레시하면_새_토큰을_발급하고_옛_refresh는_무효화된다() throws Exception {
         String refreshToken = registerAndGetRefreshToken("user@example.com", "pw12345678");
         String body = objectMapper.writeValueAsString(Map.of("refreshToken", refreshToken));

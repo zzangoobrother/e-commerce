@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class CustomerAuthController {
 
     private static final String BLOCKED_MESSAGE = "로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.";
+    private static final String REGISTER_BLOCKED_MESSAGE = "가입 시도가 너무 많습니다. 잠시 후 다시 시도하세요.";
 
     private final CustomerAuthService customerAuthService;
     private final LoginAttemptService loginAttemptService;
@@ -34,7 +35,13 @@ public class CustomerAuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public TokenResponse register(@Valid @RequestBody RegisterRequest request) {
+    public TokenResponse register(@Valid @RequestBody RegisterRequest request, HttpServletRequest http) {
+        // 가입 스팸·자원 고갈 방지 — IP당 윈도우 내 시도(성공 포함)를 계수한다(로그인과 달리 성공해도 리셋 없음).
+        String key = "register:" + ClientIp.from(http);
+        if (loginAttemptService.isBlocked(key)) {
+            throw new TooManyAttemptsException(REGISTER_BLOCKED_MESSAGE);
+        }
+        loginAttemptService.recordFailure(key);
         return customerAuthService.register(request);
     }
 
