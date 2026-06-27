@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { customerLogout } from "@/lib/api";
 import { CUSTOMER_ACCESS_COOKIE, CUSTOMER_REFRESH_COOKIE } from "@/lib/auth-cookies";
 
-// 고객 로그아웃 — refresh를 백엔드에서 폐기하고 쿠키를 삭제 후 로그인 페이지로.
+// 고객 로그아웃 — refresh를 백엔드에서 폐기하고 쿠키를 삭제 후 로그인 페이지로. POST 전용(측면효과 GET 제거).
 async function clearAndRedirect(request: Request) {
   const store = await cookies();
   const refreshToken = store.get(CUSTOMER_REFRESH_COOKIE)?.value;
@@ -16,10 +16,6 @@ async function clearAndRedirect(request: Request) {
   response.cookies.delete(CUSTOMER_ACCESS_COOKIE);
   response.cookies.delete(CUSTOMER_REFRESH_COOKIE);
   return response;
-}
-
-export function GET(request: Request) {
-  return clearAndRedirect(request);
 }
 
 export function POST(request: Request) {

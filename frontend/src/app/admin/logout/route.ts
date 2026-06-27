@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 import { logout } from "@/lib/api";
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/auth-cookies";
 
-// 로그아웃 — refresh를 백엔드에서 폐기하고 access·refresh 쿠키를 삭제 후 로그인 페이지로.
-// 서버 컴포넌트는 렌더 중 쿠키를 못 지우므로, 401 처리도 이 경로로 리다이렉트해 잔존 쿠키를 제거한다.
+// 어드민 로그아웃 — refresh를 백엔드에서 폐기하고 access·refresh 쿠키를 삭제 후 로그인 페이지로. POST 전용(측면효과 GET 제거).
 async function clearAndRedirect(request: Request) {
   const store = await cookies();
   const refreshToken = store.get(REFRESH_COOKIE)?.value;
@@ -17,10 +16,6 @@ async function clearAndRedirect(request: Request) {
   response.cookies.delete(ACCESS_COOKIE);
   response.cookies.delete(REFRESH_COOKIE);
   return response;
-}
-
-export function GET(request: Request) {
-  return clearAndRedirect(request);
 }
 
 export function POST(request: Request) {

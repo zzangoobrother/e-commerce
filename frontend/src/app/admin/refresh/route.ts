@@ -4,7 +4,7 @@ import { refresh } from "@/lib/api";
 import { ACCESS_COOKIE, REFRESH_COOKIE, authCookieOptions } from "@/lib/auth-cookies";
 
 // access 만료 시 자동 갱신 — admin_refresh 쿠키로 백엔드 refresh 호출.
-// 성공: 새 access/refresh 쿠키 set 후 next 경로로. 실패: /admin/logout(쿠키 삭제→로그인).
+// 성공: 새 access/refresh 쿠키 set 후 next 경로로. 실패: 쿠키 삭제 후 /admin/login으로(측면효과 GET 제거).
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const next = url.searchParams.get("next") ?? "/admin";
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const store = await cookies();
   const refreshToken = store.get(REFRESH_COOKIE)?.value;
   if (!refreshToken) {
-    return NextResponse.redirect(new URL("/admin/logout", request.url), 303);
+    return clearAndRedirectToLogin(request);
   }
 
   try {
@@ -24,6 +24,14 @@ export async function GET(request: Request) {
     response.cookies.set(REFRESH_COOKIE, tokens.refreshToken, authCookieOptions(tokens.refreshExpiresAt));
     return response;
   } catch {
-    return NextResponse.redirect(new URL("/admin/logout", request.url), 303);
+    return clearAndRedirectToLogin(request);
   }
+}
+
+// 갱신 실패 — 쿠키를 직접 삭제하고 로그인으로. (이전엔 /admin/logout GET으로 위임했으나 측면효과 GET을 제거)
+function clearAndRedirectToLogin(request: Request) {
+  const response = NextResponse.redirect(new URL("/admin/login", request.url), 303);
+  response.cookies.delete(ACCESS_COOKIE);
+  response.cookies.delete(REFRESH_COOKIE);
+  return response;
 }
