@@ -58,6 +58,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/store/cart/**").hasRole("CUSTOMER")
                         // 주문은 고객 전용 (어드민 토큰 403)
                         .requestMatchers("/api/store/orders/**").hasRole("CUSTOMER")
+                        // 배송지(주소록)는 고객 전용 (어드민 토큰 403)
+                        .requestMatchers("/api/store/addresses/**").hasRole("CUSTOMER")
                         // 스토어 API·고객 인증(/api/store/auth/**) 등 그 외는 모두 개방
                         .anyRequest().permitAll())
                 // Bearer 토큰(JWT) 검증 — role 클레임을 권한으로 변환

@@ -1,0 +1,45 @@
+package com.ecommerce.address;
+
+import com.ecommerce.address.dto.AddressResponse;
+import com.ecommerce.address.dto.CreateAddressRequest;
+import com.ecommerce.common.BadRequestException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+// 배송지 주소록 — 기본배송지 불변식(항상 0/1개)·상한(10개)·소유권을 책임진다.
+@Service
+@Transactional(readOnly = true)
+public class CustomerAddressService {
+
+    // 고객당 배송지 상한
+    static final int MAX_ADDRESSES = 10;
+
+    private final CustomerAddressRepository repository;
+
+    public CustomerAddressService(CustomerAddressRepository repository) {
+        this.repository = repository;
+    }
+
+    @Transactional
+    public AddressResponse create(Long customerId, CreateAddressRequest req) {
+        long count = repository.countByCustomerId(customerId);
+        if (count >= MAX_ADDRESSES) {
+            throw new BadRequestException("배송지는 최대 " + MAX_ADDRESSES + "개까지 등록할 수 있습니다.");
+        }
+        // 첫 주소이거나 명시적으로 기본 요청 시 기본배송지로 — 기존 기본은 해제
+        boolean makeDefault = req.isDefault() || count == 0;
+        if (makeDefault) {
+            clearDefault(customerId);
+        }
+        CustomerAddress saved = repository.save(new CustomerAddress(
+                customerId, req.label(), req.recipientName(), req.phone(),
+                req.zipCode(), req.address1(), req.address2(), makeDefault));
+        return AddressResponse.from(saved);
+    }
+
+    // 현재 기본배송지가 있으면 해제(dirty checking으로 flush). 불변식 유지의 핵심 헬퍼.
+    private void clearDefault(Long customerId) {
+        repository.findByCustomerIdAndIsDefaultTrue(customerId)
+                .ifPresent(a -> a.markDefault(false));
+    }
+}
