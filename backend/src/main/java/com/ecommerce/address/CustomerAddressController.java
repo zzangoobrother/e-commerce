@@ -10,6 +10,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 // 배송지 주소록 API — /api/store/addresses/**는 SecurityConfig에서 hasRole('CUSTOMER')로 보호.
 // 고객 식별: 고객 access JWT의 subject(email) → Customer 조회 (OrderController와 동일 패턴).
 @RestController
@@ -23,6 +25,11 @@ public class CustomerAddressController {
                                      CustomerRepository customerRepository) {
         this.service = service;
         this.customerRepository = customerRepository;
+    }
+
+    @GetMapping
+    public List<AddressResponse> list(@AuthenticationPrincipal Jwt jwt) {
+        return service.getAddresses(customerId(jwt));
     }
 
     @PostMapping

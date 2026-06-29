@@ -75,4 +75,21 @@ class CustomerAddressControllerTest {
                 .andExpect(jsonPath("$.isDefault").value(true))
                 .andExpect(jsonPath("$.createdAt").exists());
     }
+
+    @Test
+    void 목록은_기본배송지가_먼저_이후_최신순() throws Exception {
+        customer("user@example.com");
+        register("user@example.com", "집", false);      // 첫 등록 → 기본
+        register("user@example.com", "회사", false);     // 둘째
+        register("user@example.com", "부모님댁", false);  // 셋째(최신)
+
+        // 기대 순서: 집(기본) → 부모님댁(최신) → 회사
+        mockMvc.perform(get("/api/store/addresses").with(customerJwt("user@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].label").value("집"))
+                .andExpect(jsonPath("$[0].isDefault").value(true))
+                .andExpect(jsonPath("$[1].label").value("부모님댁"))
+                .andExpect(jsonPath("$[2].label").value("회사"));
+    }
 }

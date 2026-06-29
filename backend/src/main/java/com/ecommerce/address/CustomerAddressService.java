@@ -6,6 +6,8 @@ import com.ecommerce.common.BadRequestException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 // 배송지 주소록 — 기본배송지 불변식(항상 0/1개)·상한(10개)·소유권을 책임진다.
 @Service
 @Transactional(readOnly = true)
@@ -35,6 +37,11 @@ public class CustomerAddressService {
                 customerId, req.label(), req.recipientName(), req.phone(),
                 req.zipCode(), req.address1(), req.address2(), makeDefault));
         return AddressResponse.from(saved);
+    }
+
+    public List<AddressResponse> getAddresses(Long customerId) {
+        return repository.findByCustomerIdOrderByIsDefaultDescCreatedAtDesc(customerId)
+                .stream().map(AddressResponse::from).toList();
     }
 
     // 현재 기본배송지가 있으면 해제(dirty checking으로 flush). 불변식 유지의 핵심 헬퍼.
