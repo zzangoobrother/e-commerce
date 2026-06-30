@@ -2,6 +2,7 @@ package com.ecommerce.address;
 
 import com.ecommerce.address.dto.AddressResponse;
 import com.ecommerce.address.dto.CreateAddressRequest;
+import com.ecommerce.address.dto.UpdateAddressRequest;
 import com.ecommerce.common.BadRequestException;
 import com.ecommerce.common.NotFoundException;
 import org.springframework.stereotype.Service;
@@ -51,6 +52,15 @@ public class CustomerAddressService {
                 .orElseThrow(() -> new NotFoundException("배송지를 찾을 수 없습니다."));
         clearDefault(customerId);     // 기존 기본 해제
         target.markDefault(true);     // 대상 기본 지정 — 한 트랜잭션 안에서 불변식 유지
+        return AddressResponse.from(target);
+    }
+
+    @Transactional
+    public AddressResponse update(Long customerId, Long id, UpdateAddressRequest req) {
+        CustomerAddress target = repository.findByIdAndCustomerId(id, customerId)
+                .orElseThrow(() -> new NotFoundException("배송지를 찾을 수 없습니다."));
+        target.update(req.label(), req.recipientName(), req.phone(),
+                req.zipCode(), req.address1(), req.address2());
         return AddressResponse.from(target);
     }
 

@@ -97,6 +97,23 @@ class CustomerAddressControllerTest {
     }
 
     @Test
+    void 배송지를_수정하면_필드가_갱신되고_기본여부는_불변() throws Exception {
+        customer("user@example.com");
+        long id = register("user@example.com", "집", false);  // 첫 등록 → 기본
+
+        String updateBody = """
+                {"label":"본가","recipientName":"김철수","phone":"010-9999-8888","zipCode":"54321","address1":"부산시 해운대구","address2":"302호"}
+                """;
+        mockMvc.perform(put("/api/store/addresses/" + id).with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(updateBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.label").value("본가"))
+                .andExpect(jsonPath("$.recipientName").value("김철수"))
+                .andExpect(jsonPath("$.zipCode").value("54321"))
+                .andExpect(jsonPath("$.isDefault").value(true));   // 수정해도 기본 유지
+    }
+
+    @Test
     void 목록은_기본배송지가_먼저_이후_최신순() throws Exception {
         customer("user@example.com");
         register("user@example.com", "집", false);      // 첫 등록 → 기본

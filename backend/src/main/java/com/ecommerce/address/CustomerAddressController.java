@@ -2,6 +2,7 @@ package com.ecommerce.address;
 
 import com.ecommerce.address.dto.AddressResponse;
 import com.ecommerce.address.dto.CreateAddressRequest;
+import com.ecommerce.address.dto.UpdateAddressRequest;
 import com.ecommerce.auth.CustomerRepository;
 import com.ecommerce.common.UnauthorizedException;
 import jakarta.validation.Valid;
@@ -37,6 +38,12 @@ public class CustomerAddressController {
     public AddressResponse create(@AuthenticationPrincipal Jwt jwt,
                                   @RequestBody @Valid CreateAddressRequest req) {
         return service.create(customerId(jwt), req);
+    }
+
+    @PutMapping("/{id}")
+    public AddressResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
+                                  @RequestBody @Valid UpdateAddressRequest req) {
+        return service.update(customerId(jwt), id, req);
     }
 
     @PostMapping("/{id}/default")
