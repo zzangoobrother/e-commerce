@@ -39,6 +39,11 @@ public class CustomerAddressController {
         return service.create(customerId(jwt), req);
     }
 
+    @PostMapping("/{id}/default")
+    public AddressResponse setDefault(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
+        return service.setDefault(customerId(jwt), id);
+    }
+
     // 토큰은 유효하지만 고객 행이 없는 경우(탈퇴 등) 401
     private Long customerId(Jwt jwt) {
         return customerRepository.findByEmail(jwt.getSubject())

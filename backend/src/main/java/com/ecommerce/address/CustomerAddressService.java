@@ -3,6 +3,7 @@ package com.ecommerce.address;
 import com.ecommerce.address.dto.AddressResponse;
 import com.ecommerce.address.dto.CreateAddressRequest;
 import com.ecommerce.common.BadRequestException;
+import com.ecommerce.common.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +43,15 @@ public class CustomerAddressService {
     public List<AddressResponse> getAddresses(Long customerId) {
         return repository.findByCustomerIdOrderByIsDefaultDescCreatedAtDesc(customerId)
                 .stream().map(AddressResponse::from).toList();
+    }
+
+    @Transactional
+    public AddressResponse setDefault(Long customerId, Long id) {
+        CustomerAddress target = repository.findByIdAndCustomerId(id, customerId)
+                .orElseThrow(() -> new NotFoundException("배송지를 찾을 수 없습니다."));
+        clearDefault(customerId);     // 기존 기본 해제
+        target.markDefault(true);     // 대상 기본 지정 — 한 트랜잭션 안에서 불변식 유지
+        return AddressResponse.from(target);
     }
 
     // 현재 기본배송지가 있으면 해제(dirty checking으로 flush). 불변식 유지의 핵심 헬퍼.

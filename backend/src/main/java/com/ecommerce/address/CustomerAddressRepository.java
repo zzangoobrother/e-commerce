@@ -13,6 +13,9 @@ public interface CustomerAddressRepository extends JpaRepository<CustomerAddress
     // 기본배송지 해제(불변식 유지)용 — 현재 기본 1건 조회
     Optional<CustomerAddress> findByCustomerIdAndIsDefaultTrue(Long customerId);
 
+    // 소유권 포함 단건 조회 — 모든 {id} 연산의 소유권 가드
+    Optional<CustomerAddress> findByIdAndCustomerId(Long id, Long customerId);
+
     // 목록: 기본배송지 먼저, 이후 최신순
     List<CustomerAddress> findByCustomerIdOrderByIsDefaultDescCreatedAtDesc(Long customerId);
 }

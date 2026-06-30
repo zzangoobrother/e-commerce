@@ -77,6 +77,26 @@ class CustomerAddressControllerTest {
     }
 
     @Test
+    void 다른_배송지를_기본으로_지정하면_기존_기본은_해제된다() throws Exception {
+        customer("user@example.com");
+        register("user@example.com", "집", false);              // 첫 등록 → 기본
+        long office = register("user@example.com", "회사", false); // 둘째(비기본)
+
+        mockMvc.perform(post("/api/store/addresses/" + office + "/default")
+                        .with(customerJwt("user@example.com")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.label").value("회사"))
+                .andExpect(jsonPath("$.isDefault").value(true));
+
+        // 목록: 회사(기본) 먼저, 집은 기본 해제됨 — 정확히 1개만 기본
+        mockMvc.perform(get("/api/store/addresses").with(customerJwt("user@example.com")))
+                .andExpect(jsonPath("$[0].label").value("회사"))
+                .andExpect(jsonPath("$[0].isDefault").value(true))
+                .andExpect(jsonPath("$[1].label").value("집"))
+                .andExpect(jsonPath("$[1].isDefault").value(false));
+    }
+
+    @Test
     void 목록은_기본배송지가_먼저_이후_최신순() throws Exception {
         customer("user@example.com");
         register("user@example.com", "집", false);      // 첫 등록 → 기본
