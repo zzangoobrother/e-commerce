@@ -129,4 +129,20 @@ class CustomerAddressControllerTest {
                 .andExpect(jsonPath("$[1].label").value("부모님댁"))
                 .andExpect(jsonPath("$[2].label").value("회사"));
     }
+
+    @Test
+    void 기본배송지를_삭제하면_남은_최신이_자동_기본승격() throws Exception {
+        customer("user@example.com");
+        long home = register("user@example.com", "집", false);  // 첫 등록 → 기본
+        register("user@example.com", "회사", false);             // 둘째(최신, 비기본)
+
+        mockMvc.perform(delete("/api/store/addresses/" + home).with(customerJwt("user@example.com")))
+                .andExpect(status().isNoContent());
+
+        // 남은 1개(회사)가 기본으로 승격
+        mockMvc.perform(get("/api/store/addresses").with(customerJwt("user@example.com")))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].label").value("회사"))
+                .andExpect(jsonPath("$[0].isDefault").value(true));
+    }
 }

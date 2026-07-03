@@ -18,4 +18,7 @@ public interface CustomerAddressRepository extends JpaRepository<CustomerAddress
 
     // 목록: 기본배송지 먼저, 이후 최신순
     List<CustomerAddress> findByCustomerIdOrderByIsDefaultDescCreatedAtDesc(Long customerId);
+
+    // 삭제 후 기본 자동 승격 대상 — 남은 주소 중 최신
+    Optional<CustomerAddress> findFirstByCustomerIdOrderByCreatedAtDesc(Long customerId);
 }

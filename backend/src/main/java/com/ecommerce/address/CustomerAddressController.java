@@ -51,6 +51,12 @@ public class CustomerAddressController {
         return service.setDefault(customerId(jwt), id);
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
+        service.delete(customerId(jwt), id);
+    }
+
     // 토큰은 유효하지만 고객 행이 없는 경우(탈퇴 등) 401
     private Long customerId(Jwt jwt) {
         return customerRepository.findByEmail(jwt.getSubject())

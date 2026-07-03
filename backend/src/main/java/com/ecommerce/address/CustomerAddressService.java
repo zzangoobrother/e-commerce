@@ -64,6 +64,20 @@ public class CustomerAddressService {
         return AddressResponse.from(target);
     }
 
+    @Transactional
+    public void delete(Long customerId, Long id) {
+        CustomerAddress target = repository.findByIdAndCustomerId(id, customerId)
+                .orElseThrow(() -> new NotFoundException("배송지를 찾을 수 없습니다."));
+        boolean wasDefault = target.isDefault();
+        repository.delete(target);
+        if (wasDefault) {
+            // 삭제 행을 제외하고 조회하려면 먼저 flush — 그 후 남은 최신을 기본으로 승격
+            repository.flush();
+            repository.findFirstByCustomerIdOrderByCreatedAtDesc(customerId)
+                    .ifPresent(a -> a.markDefault(true));
+        }
+    }
+
     // 현재 기본배송지가 있으면 해제(dirty checking으로 flush). 불변식 유지의 핵심 헬퍼.
     private void clearDefault(Long customerId) {
         repository.findByCustomerIdAndIsDefaultTrue(customerId)
