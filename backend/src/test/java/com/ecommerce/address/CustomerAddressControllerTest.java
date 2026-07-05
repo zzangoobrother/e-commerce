@@ -145,4 +145,16 @@ class CustomerAddressControllerTest {
                 .andExpect(jsonPath("$[0].label").value("회사"))
                 .andExpect(jsonPath("$[0].isDefault").value(true));
     }
+
+    @Test
+    void 열한번째_배송지_등록은_400() throws Exception {
+        customer("user@example.com");
+        for (int i = 1; i <= 10; i++) {
+            register("user@example.com", "주소" + i, false);
+        }
+
+        mockMvc.perform(post("/api/store/addresses").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(addressJson("주소11", false)))
+                .andExpect(status().isBadRequest());
+    }
 }
