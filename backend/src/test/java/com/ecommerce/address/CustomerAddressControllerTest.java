@@ -157,4 +157,43 @@ class CustomerAddressControllerTest {
                         .contentType(MediaType.APPLICATION_JSON).content(addressJson("주소11", false)))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void 타인의_배송지에_접근하면_404() throws Exception {
+        customer("owner@example.com");
+        customer("attacker@example.com");
+        long id = register("owner@example.com", "집", false);
+
+        String body = """
+                {"label":"탈취","recipientName":"공격자","phone":"010-0000-0000","zipCode":"00000","address1":"어딘가","address2":""}
+                """;
+        // 수정 시도
+        mockMvc.perform(put("/api/store/addresses/" + id).with(customerJwt("attacker@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNotFound());
+        // 삭제 시도
+        mockMvc.perform(delete("/api/store/addresses/" + id).with(customerJwt("attacker@example.com")))
+                .andExpect(status().isNotFound());
+        // 기본지정 시도
+        mockMvc.perform(post("/api/store/addresses/" + id + "/default")
+                        .with(customerJwt("attacker@example.com")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void 미인증_요청은_401() throws Exception {
+        mockMvc.perform(get("/api/store/addresses"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void 필수_필드가_비면_400() throws Exception {
+        customer("user@example.com");
+        String invalid = """
+                {"label":"","recipientName":"","phone":"","zipCode":"","address1":"","address2":""}
+                """;
+        mockMvc.perform(post("/api/store/addresses").with(customerJwt("user@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON).content(invalid))
+                .andExpect(status().isBadRequest());
+    }
 }
