@@ -82,6 +82,28 @@ export interface Order {
   payment: PaymentSummary | null;
 }
 
+export interface Address {
+  id: number;
+  label: string;
+  recipientName: string;
+  phone: string;
+  zipCode: string;
+  address1: string;
+  address2: string | null;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+export interface AddressInput {
+  label: string;
+  recipientName: string;
+  phone: string;
+  zipCode: string;
+  address1: string;
+  address2: string;
+  isDefault?: boolean;
+}
+
 export interface ExcludedItem {
   productId: number;
   productName: string;
@@ -126,7 +148,7 @@ async function getJson<T>(path: string, token?: string): Promise<T> {
 // 인증 변경 요청 공통 처리 — 실패 시 서버 메시지를 보존한 ApiError, 204는 본문 없음
 async function sendJson<T>(
   path: string,
-  method: "POST" | "PATCH" | "DELETE",
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
   token: string,
   body?: unknown,
 ): Promise<T> {
@@ -280,6 +302,21 @@ export const createOrder = (token: string, card: CardPaymentRequest) =>
 export const getOrders = (token: string) => getJson<Order[]>("/api/store/orders", token);
 export const cancelOrder = (token: string, orderId: number) =>
   sendJson<Order>(`/api/store/orders/${orderId}/cancel`, "POST", token);
+
+// 배송지 주소록 (고객 Bearer 토큰 필요)
+export const getAddresses = (token: string) =>
+  getJson<Address[]>("/api/store/addresses", token);
+export const createAddress = (token: string, body: AddressInput) =>
+  sendJson<Address>("/api/store/addresses", "POST", token, body);
+export const updateAddress = (
+  token: string,
+  id: number,
+  body: Omit<AddressInput, "isDefault">,
+) => sendJson<Address>(`/api/store/addresses/${id}`, "PUT", token, body);
+export const deleteAddress = (token: string, id: number) =>
+  sendJson<void>(`/api/store/addresses/${id}`, "DELETE", token);
+export const setDefaultAddress = (token: string, id: number) =>
+  sendJson<Address>(`/api/store/addresses/${id}/default`, "POST", token);
 
 // 어드민 주문 관리 (어드민 Bearer 토큰 필요)
 export const getAdminOrders = (token: string, status?: OrderStatus) =>
