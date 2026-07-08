@@ -26,6 +26,8 @@
 
 > **어드민 주문 관리(어드민 전용):** 어드민은 전체 주문을 조회하고(고객 이메일 포함·상태 필터), 배송 시작(ORDERED→SHIPPING)·배송 완료(SHIPPING→DELIVERED)·취소(ORDERED만, 재고 복원)를 수행할 수 있다.
 
+> **배송지 관리(주소록, 고객 전용):** 고객은 여러 배송지를 등록·조회·수정·삭제하고 기본배송지를 지정할 수 있다(주소록 CRUD). 기본배송지는 **항상 0/1개** 불변식을 유지한다 — 첫 배송지는 자동 기본이 되고, 다른 배송지를 기본으로 지정하면 기존 기본은 자동 해제되며, 기본배송지를 삭제하면 남은 최신 배송지가 자동 승격한다. 고객당 최대 10개까지 등록할 수 있고, 모든 단건 연산은 소유권을 강제해 타인의 배송지 접근은 존재 여부를 노출하지 않고 404를 반환한다. (주문·결제와의 배송지 연동은 후속 범위.)
+
 > **기존 로컬 DB 볼륨이 있는 경우:** 공급사명 유니크 제약이 추가되어 기존 볼륨에는 자동
 > 적용되지 않을 수 있다. `docker compose down -v && docker compose up -d`로 볼륨을
 > 재생성하면 새 스키마로 시작한다.
@@ -79,6 +81,11 @@ createdAt (LocalDateTime)     price (BigDecimal)
 | 고객 | `POST /api/store/orders` | 주문 생성 — 장바구니 전체를 주문으로 전환(부분 주문: 구매 불가 항목 제외·사유 반환), 카드 결제 본문 수신·승인 시 확정·재고 차감·가격 스냅샷. 카드 거절 시 402·형식오류 시 400(주문·재고 미반영) (고객 전용) |
 | 고객 | `GET /api/store/orders` | 내 주문 목록 — 최신순, 항목·합계·결제 요약(brand·last4·상태) 포함 (고객 전용) |
 | 고객 | `POST /api/store/orders/{orderId}/cancel` | 주문 취소 — 상태 전이(ORDERED→CANCELLED)·재고 복원, ORDERED일 때만 (고객 전용) |
+| 고객 | `GET /api/store/addresses` | 내 배송지 목록 — 기본배송지 먼저, 이후 최신순 (고객 전용) |
+| 고객 | `POST /api/store/addresses` | 배송지 등록 — 첫 배송지는 자동 기본, 상한 10개 초과 시 400 (고객 전용) |
+| 고객 | `PUT /api/store/addresses/{id}` | 배송지 수정 — 기본여부는 불변(전용 경로로 일원화), 소유권 위반 404 (고객 전용) |
+| 고객 | `DELETE /api/store/addresses/{id}` | 배송지 삭제 — 기본 삭제 시 남은 최신 자동 승격, 204 (고객 전용) |
+| 고객 | `POST /api/store/addresses/{id}/default` | 기본배송지 지정 — 기존 기본 자동 해제(항상 0/1개) (고객 전용) |
 | 어드민 | `GET /api/admin/orders?status=` | 전체 주문 목록 — 고객 이메일 포함, 상태 필터 옵션 |
 | 어드민 | `POST /api/admin/orders/{id}/ship` | 배송 시작 — 상태 전이(ORDERED→SHIPPING) |
 | 어드민 | `POST /api/admin/orders/{id}/deliver` | 배송 완료 — 상태 전이(SHIPPING→DELIVERED) |
